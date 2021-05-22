@@ -99,6 +99,11 @@ function hex2uintN(n,hex){
 }
 
 // Convert a hex string to a byte array
+/**
+ * Reverses hexadecimal string
+ * @param {string} hex - Hexadecimal string
+ * @returns {string} Reversed hexadecimal string
+ */
 function reverseHex(hex) {
     if(hex.substr(0,2)=='0x') hex = hex.substr(2)
     if(hex.length % 2 == 1) hex = '0'+ hex 
@@ -131,7 +136,12 @@ function bits2hex(bits) {
     return hex
 }
 
-// bits <--> uintN
+/**
+ * Converts a bit string to an array of N-bit unsigned integers
+ * @param   {number} n      Number of bits
+ * @param   {string} bits   Bits string
+ * @returns {int[]}         Array of unsigned integers
+ */
 function bits2uintN(n,bits) {
     uintN = []
     while(bits.length > 0){

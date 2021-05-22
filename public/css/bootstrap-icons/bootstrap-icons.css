@@ -1343,3 +1343,4 @@ url("./fonts/bootstrap-icons.woff?231ce25e89ab5804f9a6c427b8d325c9") format("wof
 .bi-youtube::before { content: "\f62b"; }
 .bi-zoom-in::before { content: "\f62c"; }
 .bi-zoom-out::before { content: "\f62d"; }
+.bi-file-earmark-pdf::before { content: "\f62e" }
