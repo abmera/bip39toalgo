@@ -1,0 +1,132 @@
+/*body {
+    padding: 50px;
+    font: 12px Helvetica, Arial, sans-serif;
+  }
+  
+a {
+    color: #00B7FF;
+  }
+  
+div {
+    padding: 10px;
+  }*/
+  
+.unsecure {
+    color: #ffffff;
+    background: #aa0000;
+  }
+  
+.secure {
+    color: #ffffff;
+    background: #00aa00;
+  }
+
+#log {
+    font-family: monospace;
+    display: block;
+    border-radius: 4px;
+    /*overflow: scroll;*/
+    overflow-x: auto;
+    border: 1px solid #DBE2F2;
+    color: #324354;
+    background-color: #F3F6FA;
+    /*font-size: small;*/
+    font-size: 12px;
+    /*line-height: 1.0em;*/
+    margin: 0.7em 0;
+    box-sizing: border-box;
+    text-rendering: optimizeLegibility;
+    padding: 0.7em;
+    display: none;
+  }
+
+.am-link {
+    cursor: pointer;
+  }
+  
+::selection {
+    background: #FFEA80;
+    color: #000;
+  }
+  
+.am-round {
+    border-radius: 4px;
+  }
+  
+.am-margins-td {
+    margin-top: 8px;
+    margin-bottom: 8px;
+  }
+
+/*#mnemo-txt {
+    width: 70%;
+    height: 70px;
+    resize: none;
+}*/
+
+#mnemoTxt:{
+  height: 115px;
+  resize: none !important;
+}
+
+/* Hide the popper when the reference is hidden */
+/*.am-tooltip[data-popper-reference-hidden] {
+  visibility: hidden;
+  pointer-events: none;
+}*/
+
+.am-tooltip {
+  background: #333;
+  color: white;
+  font-weight: bold;
+  padding: 4px 8px;
+  font-size: 13px;
+  border-radius: 4px;
+  display: none;
+/*  opacity: 1; // do this
+  z-index: -1; // this keeps it from blocking other elements when it's hidden
+  &:hover {
+    visibility: visible;
+    pointer-events: auto;
+    opacity: 1; // oh yeah 
+    z-index: 1;
+  }*/
+}
+
+.am-tooltip[data-show] {
+  display: block;
+}
+
+.am-arrow,
+.am-arrow::before {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: inherit;
+}
+
+.am-arrow {
+  visibility: hidden;
+}
+
+.am-arrow::before {
+  visibility: visible;
+  content: '';
+  transform: rotate(45deg);
+}
+
+.am-tooltip[data-popper-placement^='top'] > .am-arrow {
+  bottom: -4px;
+}
+
+.am-tooltip[data-popper-placement^='bottom'] .am-arrow {
+  top: -4px;
+}
+
+.am-tooltip[data-popper-placement^='left'] > .am-arrow {
+  right: -4px;
+}
+
+.am-tooltip[data-popper-placement^='right'] > .am-arrow {
+  left: -4px;
+}
