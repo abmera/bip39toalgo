@@ -1,4 +1,5 @@
 const bip39words = require('./bip39-en').words
+const utils = require('./utils')
 const hmacSHA512 = require('crypto-js/hmac-sha512')
 const hmacSHA256 = require('crypto-js/hmac-sha256')
 const PBKDF2 = require('crypto-js/pbkdf2')
@@ -8,7 +9,6 @@ const EdDSA = require('elliptic').eddsa;
 const ecEd25519 = new EdDSA('ed25519');
 const ecSECP256 = new EC('secp256k1');
 const ecCurve25519 = new EC('ed25519');
-const rand = require('random-number-csprng');
 
 const BIP32KEY_HARDEN = 0x80000000
 const ed25519_n = 2n**252n + 27742317777372353535851937790883648493n
@@ -23,12 +23,18 @@ const _getBit   = (character, pattern) => (character &  pattern) >>> 0
 const _setBit   = (character, pattern) => (character |  pattern) >>> 0
 const _clearBit = (character, pattern) => (character & ~pattern) >>> 0
 
-// https://stackoverflow.com/questions/6798111/bitwise-operations-on-32-bit-unsigned-ints
+// In JS, to do bitwise operations with unsigned ints, follow these rules:
+// 1. Always end bitwise operations with >>> 0 so the result gets interpreted
+//    as unsigned.
+// 2. Don't use >>. If the left-most bit is 1 it will try to preseve the sign and 
+//    thus will introduce 1's to the left. Always use >>>.
+// 3. Only if the last op is >>>, >>> 0 is not necessary.
+// Source: https://stackoverflow.com/questions/6798111/bitwise-operations-on-32-bit-unsigned-ints
 const _OR  = (x,y) => (x | y) >>> 0
 const _AND = (x,y) => (x & y) >>> 0
 const _XOR = (x,y) => (x ^ y) >>> 0
 
-//https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+// Source: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
 const RED     = s => `\x1b[40m\x1b[31m${s}\x1b[0m`  //black background, red text
 const YELLOW  = s => `\x1b[40m\x1b[93m${s}\x1b[0m`  //black background, yellow text
 const GREEN   = s => `\x1b[40m\x1b[92m${s}\x1b[0m`  //black background, green text
@@ -41,13 +47,99 @@ const TRACE = (k,v, debug=_DBUG) => {
 const ENTER = (g   , debug=_DBUG) => { if(debug) console.group(YELLOW('ENTER ' + g)) }
 const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.log(YELLOW('LEAVE ' + g))} }
 
+/**
+ * @typedef  {Object}   WordArray
+ * @property {Object}   init
+ * @property {number[]} init.words Bytes array as signed integers
+ * @property {number}   init.sigBytes
+ */
+ 
+ /**
+ * Stores order of elliptic curve and 
+ * {@link https://github.com/satoshilabs/slips/blob/master/slip-0010.md|SLIP10}
+ * modifier for master key generation.
+ * @typedef  {Object} CurveParams
+ * @property {string} name      Name of elliptic curve
+ * @property {string} modifier  Key to use in HMAC-SHA512 as per SLIP10
+ * @property {BigInt} order     Order of the elliptic curve
+ */
+
+/** 
+ * @typedef  {Object}   AlgoData
+ * @property {Object}   algo
+ * @property {string}   algo.key        Algorand private key in hexadecimal
+ * @property {address}  algo.address    Algorand public wallet address
+ * @property {string[]} algo.words      Algorand mnemonic (25 words)
+ * @property {string}   algo.pub        Algorand public key in hexadecimal
+ * @property {string=}  algo.chk1       Public key cheksum
+ * @property {string=}  algo.chk2       Mnemonic cheksum
+ */
+
+/**
+ * @typedef  {Object}              DerivationNode
+ * @property {(string|WordArray)}  kL    Leftmost 32 bytes of private key
+ * @property {(string|WordArray)}  kR    Rightmost 32 bytes of private Key
+ * @property {(string|WordArray)=} A     32 bytes public key (y coordinatte only)
+ * @property {(string|WordArray)=} c     32 bytes chain code
+ * @property {(string|WordArray)=} P     32 bytes public key
+ * @property {AlgoData=}           algo
+ */
+
+ /**
+  * Algorand secret mnemonic (25 BIP39 words)
+  * @typedef {string[]} AlgoSecretWords
+  */
+
+/**
+ * @typedef  {Object}           AlgoAddressData
+ * @property {string}           key
+ * @property {string}           pub
+ * @property {string}           address
+ * @property {string=}          chk
+ * @property {AlgoSecretWords=} words       Algorand secret words
+ */
+
+ /**
+ * @typedef  {Object}           AlgoMnemonicData
+ * @property {AlgoSecretWords}  words       Algorand secret words  
+ * @property {string}           chk         Mnemonic checksum
+ */
+
+ /**
+ * @typedef  {Object}           AlgoParsedMnemonicData
+ * @property {string}           mnemonic    Parsed Algorand mnemonic
+ * @property {string}           original    Original mnemonic normalized (NFKD)
+ * @property {AlgoSecretWords}  words       Algorand secret words
+ * @property {string}           key         Private key in hexadecimal
+ * @property {string}           checksum    Mnemonic checksum
+ * @property {boolean}          valid       Mnemonic validity
+ */
+
+  /**
+ * @typedef  {Object}    Bip39ParsedMnemonicData
+ * @property {string}    mnemonic    Parsed Algorand mnemonic
+ * @property {string}    original    Original mnemonic normalized (NFKD)
+ * @property {string[]}  words       Algorand secret words
+ * @property {string}    checkbits   Checksum bits
+ * @property {boolean}   valid       Mnemonic validity
+ */
+
+/**
+ * Returns {@link DerivationNode} from arguments
+ * @param {(string|WordArray)} kL   Leftmost 32 bytes of private key
+ * @param {(string|WordArray)} kR   Rightmost 32 bytes of private Key
+ * @param {{A: (string|WordArray), 
+ *  c: (string|WordArray), 
+ *  p: (string|WordArray)}} args
+ * @returns {DerivationNode} Derivation node
+ */
 const _NODE = (kL,kR, ...args) => { 
     [ A, c, p ] = args
     o = { kL, kR, A, c, p }
     var dumps = () => kL.toString()
     return o
 }
-
+// assertion utility function
 function _assert(x, y, op='eq'){
     // console.log(x, op, y)
     exp = false
@@ -59,147 +151,19 @@ function _assert(x, y, op='eq'){
     if(exp) return true
     else throw EvalError(RED(`\n${x}\nNOT ${op}\n${y}`))
 }
-
-// Convert a hex string to a byte array
-function hexToBytes(hex) {
-    if(hex.substr(0,2)=='0x') hex = hex.substr(2)
-    if(hex.length % 2 == 1) hex = '0'+ hex
-    for (var bytes = [], c = 0; c < hex.length; c += 2)
-    bytes.push(parseInt(hex.substr(c, 2), 16));
-    return bytes
-}
-var hexToUint8Array = hex => Uint8Array.from(hexToBytes(hex))
-
-// Convert a byte array to a hex string
-function bytesToHex(bytes) {
-    for (var hex = [], i = 0; i < bytes.length; i++) {
-        hex.push((bytes[i] >>> 4).toString(16));
-        hex.push((bytes[i] & 0xF).toString(16));
-    }
-    hex = hex.join("")
-    if(hex.length % 2 == 1) hex = '0'+ hex
-    return hex
-}
-var uint8ArrayToHex = bytes => bytesToHex(bytes)
-
-// unint <--> hex
-var uint8hex  = u => u.reduce((p,c)=>p+c.toString(16).padStart(2,'0'),'')
-var uint16hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(4,'0'),'')
-var uint32hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(8,'0'),'')
-var uintN2hex = (n,u) => u.reduce((p,c)=>p+c.toString(16).padStart(n/8*2,'0'),'')
-
-function hex2uintN(n,hex){
-    if(n % 8 > 0 && n < 54) return -1 // muliple of 8 bits & less than Number.MAX_SAFE_INTEGER
-    if(hex.length % 2 == 1) hex = '0' + hex
-    blen = hex.length * 8 / 2
-    if(blen % n > 0) hex = hex + 'xx'.repeat((n-blen%n)/8)
-    regexp = new RegExp('[a-fA-Z0-9x]{'+2*n/8+'}','g')
-    uintN = Array.from(hex.matchAll(regexp),m => parseInt(m[0].replace(/x/gi),16))
-    return uintN
-}
-
-// Convert a hex string to a byte array
 /**
- * Reverses hexadecimal string
- * @param {string} hex - Hexadecimal string
- * @returns {string} Reversed hexadecimal string
+ * Convert integers to BIP39 words
+ * @param {number[]} nums 11-bit unsigned integers
+ * @returns {string[]} List of BIP39 words
  */
-function reverseHex(hex) {
-    if(hex.substr(0,2)=='0x') hex = hex.substr(2)
-    if(hex.length % 2 == 1) hex = '0'+ hex 
-    for (var reverse = '', i=0; i < hex.length; i += 2){
-        // console.log(hex.length-2-i)
-        reverse += hex.substr(hex.length-2-i,2)
-    }
-    return reverse
-}
-
-// bits <--> hex
-function hex2bits(hex) {
-    if(hex.substr(0,2)=='0x') hex = hex.substr(2)
-    if(hex.length % 2 == 1) hex = '0'+ hex
-    for (var bits = [], c = 0; c < hex.length; c += 2){
-        bits.push(parseInt(hex.substr(c, 2), 16).toString(2).padStart(8,'0'));
-    }
-    return bits.join('')
-}
-
-function bits2hex(bits) {
-    buf = ''
-    hex = ''
-    while(bits.length > 0){
-        buf = bits.substr(0,8)
-        hex += parseInt(buf,2).toString(16).padStart(2,'0')
-        bits = bits.substr(8)
-        buf = ''
-    }
-    return hex
-}
-
-/**
- * Converts a bit string to an array of N-bit unsigned integers
- * @param   {number} n      Number of bits
- * @param   {string} bits   Bits string
- * @returns {int[]}         Array of unsigned integers
- */
-function bits2uintN(n,bits) {
-    uintN = []
-    while(bits.length > 0){
-        uintN.push(parseInt(bits.substr(0,n),2))
-        bits = bits.substr(n)
-    }
-    return uintN
-}
-
-var uintN2bits = (n,u) => u.reduce((p,c)=>p+c.toString(2).padStart(n,'0'),'')
-
-function hex2b32(hex){
-    iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-    bits = hex2bits(hex)
-    b32 = []
-    while(bits.length > 0){
-        i = parseInt(bits.substr(0,5).padEnd(5,'0'),2)
-        b32.push(iambase32.substr(i,1))
-        bits = bits.substr(5)
-    }
-    pad = ''
-    if(b32.length % 8 > 0) pad = '='.repeat(8 - b32.length % 8)
-    return b32.join('') + pad
-}
-
-function b32hex(b32){
-    iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
-    b32 = b32.replace(/=/gi,'')
-    pad = (b32.length * 5) % 8
-    bits = b32.split('').map(c => iambase32.search(c).toString(2).padStart(5,'0')).join('')
-    if(pad > 0) bits = bits.substr(0, bits.length - pad)
-    return bits2hex(bits)
-}
-
-function bytes2b11(bytes){
-    bits = ''
-    b11 = []
-    for (let i=bytes.length-1; i >= 0; i--)
-        bits += bytes[i].toString(2).padStart(8,0)
-    while (bits != ''){
-        b11.push(parseInt(bits.substr(-11),2))
-        bits = bits.substr(0,bits.length-11)
-    }
-    return b11
-}
-
 const numsToWords = nums => nums.reduce((p,c) => [...p, bip39words[c]],[])
-
-function randomArray(size){
-    var a = []
-    for (var i = 0; i < size; i++) {
-        a.push(rand(0,255))
-    }
-    return Promise.all(a)
-}
-
-var randomHex = size => randomArray(size).then(a => uint8hex(Uint8Array.from(a)))
-
+/**
+ * Convert {@link https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki#from-mnemonic-to-seed|BIP39} mnemonic to seed
+ * @param {string} mnemonic    Mnemonic (12-24 words delimited by single space)
+ * @param {string} passphrase  Passphrase as suffix for the salt
+ * @param {string=} prefix     Modifier as prefix for the salt
+ * @returns {WordArray} Seed
+ */
 function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
     return new Promise(function(resolve,reject){
         seed = cp.PBKDF2(mnemonic.normalize('NFKD'), prefix+passphrase,{
@@ -212,7 +176,11 @@ function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
         resolve(seed)
     })
 }
-
+/**
+ * Get elliptic curve parameters
+ * @param {string} curveName Name of the elliptic curve
+ * @returns {CurveParams} Curve parameters
+ */
 function curveInfo(curveName){
     curves = {
     secp256k1: {
@@ -233,7 +201,15 @@ function curveInfo(curveName){
     return curves[curveName]
 
 }
-
+/**
+ * Derive root key (master node) using SLIP10 specs or
+ * implementing paper from D. Khovratovich and J. Law
+ * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
+ * @param {WordArray}   seed Entropy to derive root key
+ * @param {CurveParams} curve Curve parameters
+ * @param {string}      [method='slip10'] Derivation method (slip10|kholaw)
+ * @returns {Promise<DerivationNode>} Promise with derivation node
+ */
 function rootKey(seed, curve, method='slip10'){
     return new Promise((res,error)=>{
         ENTER('ROOT KEY')
@@ -257,21 +233,21 @@ function rootKey(seed, curve, method='slip10'){
             I = _hmac512(seed, curve.modifier).toString()
             kL = unhexilify(I.substr(0,64))
             kR = unhexilify(I.substr(64))
-            kLb = hexToBytes(kL.toString())
+            kLb = utils.hexToBytes(kL.toString())
             while (_getBit(kLb[31], 0b00100000) !=0){
                 seed = unhexilify(I)
                 I = _hmac512(seed, curve.modifier).toString()
                 kL = unhexilify(I.substr(0,64))
                 kR = unhexilify(I.substr(64))
-                kLb = hexToBytes(kL.toString())
+                kLb = utils.hexToBytes(kL.toString())
             }
 
             kLb[0]  = _clearBit( kLb[0], 0b00000111)
             kLb[31] = _clearBit(kLb[31], 0b10000000)
             kLb[31] =   _setBit(kLb[31], 0b01000000)
 
-            kL = unhexilify(bytesToHex(kLb))
-            kLr = bytesToHex(kLb.reverse())
+            kL = unhexilify(utils.bytesToHex(kLb))
+            kLr = utils.bytesToHex(kLb.reverse())
 
             pub  = ecCurve25519.keyFromPrivate(kLr).getPublic()
             x = pub.getX().toString('hex')
@@ -292,10 +268,15 @@ function rootKey(seed, curve, method='slip10'){
         }
     })
 }
-
+/**
+ * Computes public key for given curve
+ * @param {(string|WordArray)} key Private key
+ * @param {CurveParams} curve Curve parameters
+ * @returns {string} Public key in hexadecimal
+ */
 function getPublicKey(key,curve){
     if (curve.name == 'ed25519'){
-        k = '00' + bytesToHex(ecEd25519.keyFromSecret(key.toString()).getPublic())
+        k = '00' + utils.bytesToHex(ecEd25519.keyFromSecret(key.toString()).getPublic())
     }
     else if(curve.name == 'secp256k1'){
         pub  = ecSECP256.keyFromPrivate(key.toString()).getPublic()
@@ -311,7 +292,14 @@ function getPublicKey(key,curve){
 }
     return k
 }
-
+/**
+ * Derives child key from parent key data using SLIP10 specs
+ * @param {(string|WordArray)} parentKey    Parent node private key
+ * @param {WordArray} parentChaincode       Parent node chain code
+ * @param {number} i                        Current path index
+ * @param {CurveParams} curve               Curve params
+ * @returns {Promise<DerivationNode>}       Child node
+ */
 function deriveChild(parentKey, parentChaincode, i, curve){
     return new Promise((res,error)=>{
         ENTER('DERIVE CHILD SLIP10')
@@ -349,16 +337,26 @@ function deriveChild(parentKey, parentChaincode, i, curve){
         res(o)
     })
 }
-
+/**
+ * Encodes elliptic curve X-coordinate into Y-coordinate
+ * @param {string} x X-coordinate bytes in hexadecimal
+ * @param {string} y Y-coordinate bytes in hexadecimal
+ */
 function encodeXY(x,y){
-    xb = hexToBytes(x)
-    yb = hexToBytes(y)
+    xb = utils.hexToBytes(x)
+    yb = utils.hexToBytes(y)
     if(_AND(xb[31],1)){
         yb[0] = (yb[0] | 0x80) >>> 0
     }
-    return bytesToHex(yb.reverse())
+    return utils.bytesToHex(yb.reverse())
 }
-
+/**
+ * Derive child key by implementing paper from D. Khovratovich and J. Law
+ * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
+ * @param {DerivationNode} node         Parent node
+ * @param {number} i                    Current path index
+ * @returns {Promise<DerivationNode>}   Child node
+ */
 function deriveChildKhoLaw(node, i){
     ENTER('DERIVE CHILD KHO-LAW')
     return new Promise((res,error)=>{
@@ -367,7 +365,7 @@ function deriveChildKhoLaw(node, i){
         AP = node.A
         cP = node.c
 
-        ib = reverseHex(i.toString(16).padStart(4*2,'0'))
+        ib = utils.reverseHex(i.toString(16).padStart(4*2,'0'))
         
         // TRACE('\nDERIVE CHILD KEY:','')
         TRACE('kLP',hexilify(kLP))
@@ -401,8 +399,8 @@ function deriveChildKhoLaw(node, i){
         ZR = unhexilify(Z.substr(32*2))
 
         // compute KRi
-        kLn = BigInt('0x'+reverseHex(hexilify(ZL))) * 8n 
-            + BigInt('0x'+reverseHex(hexilify(kLP)))
+        kLn = BigInt('0x'+utils.reverseHex(hexilify(ZL))) * 8n 
+            + BigInt('0x'+utils.reverseHex(hexilify(kLP)))
         
         TRACE('ZL',ZL.toString())
         TRACE('ZR',ZR.toString())
@@ -415,24 +413,24 @@ function deriveChildKhoLaw(node, i){
 
         // compute KLi
         kRn = (
-            BigInt('0x'+reverseHex(hexilify(ZR)))
-          + BigInt('0x'+reverseHex(hexilify(kRP)))
+            BigInt('0x'+utils.reverseHex(hexilify(ZR)))
+          + BigInt('0x'+utils.reverseHex(hexilify(kRP)))
              ) % 2n**256n
 
         TRACE('kRn',kRn.toString(16))
 
-        kL = reverseHex(kLn.toString(16))
-        kR = reverseHex(kRn.toString(16))
+        kL = utils.reverseHex(kLn.toString(16))
+        kR = utils.reverseHex(kRn.toString(16))
         TRACE('kL',kL.toString(16))
         TRACE('kR',kR.toString(16))
 
-        pub  = ecCurve25519.keyFromPrivate(reverseHex(kL)).getPublic()
+        pub  = ecCurve25519.keyFromPrivate(utils.reverseHex(kL)).getPublic()
 
         x = pub.getX().toString('hex')
         y = pub.getY().toString('hex')
         A = encodeXY(x,y)
 
-        TRACE('scalar', BigInt('0x'+reverseHex(kL)).toString(10))
+        TRACE('scalar', BigInt('0x'+utils.reverseHex(kL)).toString(10))
         TRACE('x',x)
         TRACE('y',y)
         TRACE('A',A)
@@ -443,6 +441,11 @@ function deriveChildKhoLaw(node, i){
     })
 }
 
+ /**
+  * Computes Algorand address and mnemonic from {@link DerivationNode}
+  * @param {DerivationNode} node
+  * @returns {Promise<DerivationNode>} Derivation node with Algorand's secret 
+  */
 function algoSecret(node){
     ENTER('ALGORAND SECRET')
     return new Promise((res,error)=>{
@@ -462,26 +465,43 @@ function algoSecret(node){
     })
 }
 
+/**
+ * Derives Algorand's public key from private key
+ * @param {(string|WordArray)} key
+ * @returns {AlgoAddressData} Algorand's address data
+ */
 function algoAddress(key){
     key = key.toString().padStart(64,'0')
-    pub = bytesToHex(ecEd25519.keyFromSecret(key).getPublic())
+    pub = utils.bytesToHex(ecEd25519.keyFromSecret(key).getPublic())
     chk = hexilify(cp.SHA512t256(unhexilify(pub))).substr(0,64).substr(-8)
-    address = hex2b32(pub+chk).replace(/=/g,'')
+    address = utils.hex2b32(pub+chk).replace(/=/g,'')
     return { key, pub, address, chk }
 }
-
+/**
+ * Translates Algorand private key to mnemonic words
+ * @param {string} key Private key in hexadecimal
+ * @returns {AlgoMnemonicData} Algorand's mnemonic data
+ */
 function algoMnemonic(key){
-    nums = bytes2b11(hexToBytes(key))
+    nums = utils.bytes2b11(utils.hexToBytes(key))
     words = numsToWords(nums)
     chk = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
-    chkN = bytes2b11(hexToBytes(chk))
+    chkN = utils.bytes2b11(utils.hexToBytes(chk))
     chkW = numsToWords(chkN)[0]
     words.push(chkW)
     return { words, chk }
 }
+/**
+ * Generates random Algorand address
+ * @returns {AlgoAddressData} Algorand's address data
+ */
+const randomAlgoAddress = () => utils.randomHex(32).then(ent => algoAddress(ent))
 
-const randomAlgoAddress = () => randomHex(32).then(ent => algoAddress(ent))
-
+/**
+ * Translates Algorand mnemonic to private key
+ * @param {string} mnemonic 
+ * @returns {AlgoParsedMnemonicData} Algorand's parsed mnemonic data
+ */
 function algoKeyFromMnemonic(mnemonic){
     mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
     if(mnemonic.length !== 25) throw new Error('Invalid mnemonic length: expected 25 words')
@@ -493,10 +513,10 @@ function algoKeyFromMnemonic(mnemonic){
     cs1 = csN1.toString(16)
     // convert 11-bit numbers (little endian) to bits:
     bits = nums.slice(0,24).map((e,i) => e.toString(2).padStart(11,'0')).reverse().join('')
-    key = reverseHex(bits2hex(bits)).substr(0,64)
+    key = utils.reverseHex(utils.bits2hex(bits)).substr(0,64)
     // compute the checksum to verify mnemonic:
     cs2 = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
-    csN2 = bytes2b11(hexToBytes(cs2))[0]
+    csN2 = utils.bytes2b11(utils.hexToBytes(cs2))[0]
     isValid = csN1 === csN2
     parsed = { 
         mnemonic:words.join(' '),
@@ -508,21 +528,26 @@ function algoKeyFromMnemonic(mnemonic){
     }
     return parsed
 }
-
+/**
+ * Derives Algorand public key and address
+ * @param {string} mnemonic Algorand mnemonic
+ * @returns {AlgoAddressData} Algorand's address data
+ */
 function algoAddressFromMnemonic(mnemonic){
     var { key, words, valid } = algoKeyFromMnemonic(mnemonic)
     if(!valid) throw new Error('Invalid mnemonic checksum')
     var { pub, address } = algoAddress(key)
-    return { key, address, words, pub }
+    return { key, pub, address, words }
 }
-
-const range = (n,o=0) => Array.from(new Uint8Array(n).map((e,i)=>i+o))
-const splitter = (s,n) => Array.from(new Uint8Array(Math.ceil(s.length/n)).map( (e,i) => i*n ) ).map(i => s.substr(i,n))
-
-function countAddressEnding(){
+/**
+ * Generates N random addresses and counts occurrences of last character
+ * @param {number} [n=1000] Number of addresses to generate
+ * @returns {void} Nothing
+ */
+function countAddressEnding(n=1000){
     let b32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.split('')
     let b32map = Object.fromEntries(new Map(b32.map(e => [e,0])))
-    let endChars = range(1000).map((e,i,a) => randomAlgoAddress().then(algo => {
+    let endChars = utils.range(n).map((e,i,a) => randomAlgoAddress().then(algo => {
         if((i+1)%1000==0) console.log(i, algo.address)
         return algo.address.substr(-1)
     }))
@@ -534,25 +559,27 @@ function countAddressEnding(){
         console.log(b32map)
     })
 }
-
-function algoWords(key, enc='hex'){
+/**
+ * Computes Algorand address and mnemonic from private key
+ * @param {string} key Private key in hexadecimal
+ * @returns {AlgoAddressData} Algorand's address data
+ */
+function algoWords(key){
     return new Promise((res,error)=>{
-        key = key.toString().padStart(64,'0')
-        pub = bytesToHex(ecEd25519.keyFromSecret(key).getPublic())
-        chk = hexilify(cp.SHA512t256(unhexilify(pub))).substr(0,64).substr(-8)
-        addr = hex2b32(pub+chk).replace(/=/g,'')
-        nums = bytes2b11(hexToBytes(key))
-        words = numsToWords(nums)
-        chk = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
-        chkN = bytes2b11(hexToBytes(chk))
-        chkW = numsToWords(chkN)[0]
-        words.push(chkW)
-        algo = {key:key,address:addr,words:words}
+        var { pub, address } = algoAddress(key)
+        var { words } = algoMnemonic(key)
+        algo = { key, pub, address, words }
         res(algo)
     })
 }
-
-function deriveSeed(seed, method, path="m/44'/283'/0'/0/0"){
+/**
+ * Derives Algorand's secret from BIP39 seed and using given method and path
+ * @param {WordArray}   seed    BIP39 seed bytes
+ * @param {string}      method  Derivation method
+ * @param {string=}     path    Derivation path
+ * @returns {Promise<DerivationNode>} Derivation node with Algorand's secret
+ */
+function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
     TRACE('method',method)
     TRACE('path',path)
 
@@ -597,16 +624,40 @@ function deriveSeed(seed, method, path="m/44'/283'/0'/0/0"){
     })
     .then(node => algoSecret(node))
 }
-
+/**
+ * Derives Algorand's secret from BIP39 mnemonic and using given method and path
+ * @param   {string}    mnemonic    BIP39 mnemonic
+ * @param   {string}    method      Derivation method
+ * @param   {string=}   path        Derivation path
+ * @param   {string=}   passphrase  BIP39 mnemonic passphrase
+ * @returns {Promise<DerivationNode>} Derivation node with Algorand secret
+ * @example
+ * // returns:
+ * // 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
+ * // NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
+ * //  1. sorry       6. laugh      11. setup      16. employ     21. favorite   
+ * //  2. aisle       7. tissue     12. kit        17. call       22. gaze       
+ * //  3. similar     8. upset      13. isolate    18. venture    23. maximum    
+ * //  4. royal       9. volcano    14. bonus      19. item       24. abandon    
+ * //  5. unveil     10. beach      15. poem       20. snack      25. leave
+ * mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
+ * deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
+ * .then(node => {
+ *     console.log(node.algo.key)
+ *     console.log(node.algo.address)
+ *     words = prettifyWordsTTB(node.algo.words)
+ *     console.log(words)
+ * })
+ */
 function deriveMnemonic(mnemonic, method, path, passphrase=''){
-    return bip39seed(mnemonic,passphrase).then(seed => deriveSeed(seed, method, path))
+    return bip39seed(mnemonic,passphrase).then(seed => deriveBip39Seed(seed, method, path))
 }
-
-function deriveBip39Seed(seed, method, path){
-    return deriveSeed(seed, method, path)
-}
-
-function prettifyWords(words){
+/**
+ * Formats list of 25 words in a 5x5 grid, indexed Left-to-Right
+ * @param {AlgoSecretWords} words - Algorand secret words
+ * @returns {string} Formatted words list with line breaks
+ */
+function prettifyWordsLTR(words){
     prettyWords = []
     row = []
     words.map((w,i)=>{
@@ -619,34 +670,70 @@ function prettifyWords(words){
         })
     return prettyWords.join('\n')
 }
-
+/**
+ * Formats list of 25 words in a 5x5 grid, indexed Top-to-Bottom
+ * @param {AlgoSecretWords} words - Algorand secret words
+ * @returns {string} Formatted words list with line breaks
+ */
+function prettifyWordsTTB(words){
+    prettyWords = words.map((w,i)=>{
+        w = ((i+1).toString().padStart(2) + '. ' + w).padEnd(15)
+        if(i>=20) w += '\n'
+        return w
+    }).map((w,i,a)=>{
+        return a[5*(i%5) + Math.floor(i/5)]
+    })
+    return prettyWords.join('')
+}
+/**
+ * Computes BIP39 checksum bits for given entropy
+ * @param {string} ent Entropy bytes in hexadecimal
+ * @param {number} cs  Checksum length in bits
+ * @returns {string} Checksum bits
+ */
 function entCheckBits(ent, cs){
     chk = cp.SHA256(unhexilify(ent)).toString().substr(0,2) //get first byte
-    return hex2bits(chk).substr(0,cs).padStart(cs)
+    return utils.hex2bits(chk).substr(0,cs).padStart(cs)
 }
-
+/**
+ * Translates entropy into BIP39 mnemonic words
+ * @param   {string}   ent 
+ * @returns {string[]} BI39 words list
+ */
 function ent2bip39words(ent){
     cs = ent.length*8/2/32
-    entChecked = hex2bits(ent).substr(0,ent.length*8/2+cs)+entCheckBits(ent,cs)
-    nums = bits2uintN(11,entChecked)
+    entChecked = utils.hex2bits(ent).substr(0,ent.length*8/2+cs)+entCheckBits(ent,cs)
+    nums = utils.bits2uintN(11,entChecked)
     wlist = numsToWords(nums)
     return wlist
 }
-
-const randomWords = size => randomHex(size).then(r => ent2bip39words(r)).then(w => w.join(' '))
-
+/**
+ * Generates random BIP39 words
+ * @param {number} size Entropy size in bytes (16|20|24|28|32)
+ * @returns {string} Mnemonic words
+ */
+const randomWords = size => utils.randomHex(size).then(r => ent2bip39words(r)).then(w => w.join(' '))
+/**
+ * Find word in BIP39 wordlist
+ * @param {string} word BIP39 word to search
+ * @returns {(string|undefined)} Found word
+ */
 function findBip39Word(word){
     w = word.trim().toLowerCase().normalize('NFKD').substr(0,4)
     return bip39words.find(bw => bw.substr(0,4)==w)
 }
-
+/**
+ * Parses BIP39 mnemonic and verifies validity
+ * @param {string} mnemonic 
+ * @returns {Bip39ParsedMnemonicData}
+ */
 function parseMnemonic(mnemonic){
     mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
     words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
     nums = words.map(w => bip39words.findIndex(bw => bw==w))
-    bits = uintN2bits(11,nums)
+    bits = utils.uintN2bits(11,nums)
     cs = bits.length % 32
-    ent = bits2hex(bits.substr(0,bits.length-cs))
+    ent = utils.bits2hex(bits.substr(0,bits.length-cs))
     chkBits1 = bits.substr(-cs)
     chkBits2 = entCheckBits(ent, cs)
     isValid = chkBits1 === chkBits2
@@ -659,21 +746,38 @@ function parseMnemonic(mnemonic){
     }
     return parsed
 }
-
+/**
+ * Generate dummy BIP39 mnemonic for testing
+ * @param {string} [word='all'] Dummy BIP39 word to repeat 
+ * @param {number} [size=24]    Number of words (12|15|18|21|24)
+ * @example
+ * // returns "dog dog dog dog dog dog dog dog dog dog dog dose"
+ * console.log(testMnemonicWords('dog',12).join(' '))
+ * @example
+ * // returns "boy boy boy boy boy boy boy boy boy boy boy boy boy boy boss"
+ * console.log(testMnemonicWords('boy',15).join(' '))
+ * @example
+ * // returns "bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety"
+ * console.log(testMnemonicWords('bar',24).join(' '))
+ */
 function testMnemonicWords(word='all',size=24){
     dummyMnemonic = `${word.trim()} `.repeat(size).trim()
     mnemonic = dummyMnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
     words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
     nums = words.map(w => bip39words.findIndex(bw => bw==w))
-    bits = uintN2bits(11,nums)
+    bits = utils.uintN2bits(11,nums)
     cs = bits.length % 32
-    ent = bits2hex(bits.substr(0,bits.length-cs))
+    ent = utils.bits2hex(bits.substr(0,bits.length-cs))
     // chkBits = entCheckBits(ent, cs)
     return ent2bip39words(ent)
 }
-
-const compose = (...fns) => arg => fns.reduce((composed, f) => f(composed), arg)
-
+/**
+ * Derive mnemonic for given test vector
+ * @param {{ no: number, mnemonic: string, 
+ *  method: string, path: string, key: string, 
+ *  address: string }} testVector
+ * @returns {void} Nothing
+ */
 function deriveMnemonicTest({ no, mnemonic, method, path, key, address }) {
     ENTER(`Test #${no}: ${method}`, true)
     return deriveMnemonic(mnemonic, method, path)
@@ -685,13 +789,16 @@ function deriveMnemonicTest({ no, mnemonic, method, path, key, address }) {
         _assert(valid, true)
         _assert(o.algo.key, key)
         _assert(o.algo.address, address)
-        console.log(prettifyWords(o.algo.words))
+        console.log(prettifyWordsLTR(o.algo.words))
         TRACE(GREENBG('assertion'), GREENBG('OK'), true)
         return true
     })
     .then(done => LEAVE('', true))
 }
-
+/**
+ * Run tests and log to console
+ * @returns {void} Nothing
+ */
 function tests() {
     vectors = [
         { 
@@ -768,11 +875,11 @@ function tests() {
 }
 
 const wallets = {
-        atomic  :{ 'method': 'bip39-seed'      ,'path': undefined           },
-        coinomi :{ 'method': 'slip10-ed25519'  ,'path': "m/44'/283'/0'/0/0" },
-        exodus  :{ 'method': 'slip10-secp256k1','path': "m/44'/283'/0'/0/0" },
-        ledger  :{ 'method': 'kholaw-ed25519'  ,'path': "m/44'/283'/0'/0/0" },
-        trust   :{ 'method': 'slip10-ed25519'  ,'path': "m/44'/283'/0'/0/0" },
+        atomic  :{ method: 'bip39-seed'      ,path: undefined           },
+        coinomi :{ method: 'slip10-ed25519'  ,path: "m/44'/283'/0'/0/0" },
+        exodus  :{ method: 'slip10-secp256k1',path: "m/44'/283'/0'/0/0" },
+        ledger  :{ method: 'kholaw-ed25519'  ,path: "m/44'/283'/0'/0/0" },
+        trust   :{ method: 'slip10-ed25519'  ,path: "m/44'/283'/0'/0/0" },
     }
 
 
@@ -781,7 +888,12 @@ const wallets = {
 //-------------------------------------------------------
 // mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
 // deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
-// .then(node => console.log(node))
+// .then(node => {
+//     console.log(node.algo.key)
+//     console.log(node.algo.address)
+//     words = prettifyWordsTTB(node.algo.words)
+//     console.log(words)
+// })
 
 //-------------------------------------------------------
 //::GENERATE DUMMY MNEMONICS FOR TESTING::
@@ -796,16 +908,14 @@ const wallets = {
 // tests()
 
 module.exports = {
-    deriveMnemonic:             deriveMnemonic,
-    parseMnemonic:              parseMnemonic,
-    findBip39Word:              findBip39Word,
-    wallets:                    wallets,
-    randomWords:                randomWords,
-    randomAlgoAddress:          randomAlgoAddress,
-    algoWords:                  algoWords,
-    bip39seed:                  bip39seed,
-    deriveBip39Seed:            deriveBip39Seed,
-    prettifyWords:              prettifyWords,
-    algoAddressFromMnemonic:    algoAddressFromMnemonic,
-    algoKeyFromMnemonic:        algoAddressFromMnemonic,
+    algoWords,
+    algoAddressFromMnemonic,
+    bip39seed,
+    deriveBip39Seed,
+    deriveMnemonic,
+    findBip39Word,
+    parseMnemonic,
+    randomAlgoAddress,
+    randomWords,
+    wallets,
 }
