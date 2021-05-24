@@ -47,25 +47,29 @@ const TRACE = (k,v, debug=_DBUG) => {
 const ENTER = (g   , debug=_DBUG) => { if(debug) console.group(YELLOW('ENTER ' + g)) }
 const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.log(YELLOW('LEAVE ' + g))} }
 
+/** @namespace BipToAlgo */
+
 /**
- * @typedef  {Object}   WordArray
- * @property {Object}   init
- * @property {number[]} init.words Bytes array as signed integers
- * @property {number}   init.sigBytes
+ * @typedef  {Object}   BipToAlgo.WordArray
+ * @memberof BipToAlgo
+ * @property {number[]} words Bytes array as signed integers
+ * @property {number}   sigBytes
  */
  
  /**
  * Stores order of elliptic curve and 
  * {@link https://github.com/satoshilabs/slips/blob/master/slip-0010.md|SLIP10}
  * modifier for master key generation.
- * @typedef  {Object} CurveParams
+ * @typedef  {Object} BipToAlgo.CurveParams
+ * @memberof BipToAlgo
  * @property {string} name      Name of elliptic curve
  * @property {string} modifier  Key to use in HMAC-SHA512 as per SLIP10
  * @property {BigInt} order     Order of the elliptic curve
  */
 
 /** 
- * @typedef  {Object}   AlgoData
+ * @typedef  {Object}   BipToAlgo.AlgoData
+ * @memberof BipToAlgo
  * @property {Object}   algo
  * @property {string}   algo.key        Algorand private key in hexadecimal
  * @property {address}  algo.address    Algorand public wallet address
@@ -76,47 +80,53 @@ const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.lo
  */
 
 /**
- * @typedef  {Object}              DerivationNode
- * @property {(string|WordArray)}  kL    Leftmost 32 bytes of private key
- * @property {(string|WordArray)}  kR    Rightmost 32 bytes of private Key
- * @property {(string|WordArray)=} A     32 bytes public key (y coordinatte only)
- * @property {(string|WordArray)=} c     32 bytes chain code
- * @property {(string|WordArray)=} P     32 bytes public key
- * @property {AlgoData=}           algo
+ * @typedef  {Object}              BipToAlgo.DerivationNode
+ * @memberof BipToAlgo
+ * @property {(string|BipToAlgo.WordArray)}  kL    Leftmost 32 bytes of private key
+ * @property {(string|BipToAlgo.WordArray)}  kR    Rightmost 32 bytes of private Key
+ * @property {(string|BipToAlgo.WordArray)=} A     32 bytes public key (y coordinatte only)
+ * @property {(string|BipToAlgo.WordArray)=} c     32 bytes chain code
+ * @property {(string|BipToAlgo.WordArray)=} P     32 bytes public key
+ * @property {BipToAlgo.AlgoData=}           algo
  */
 
- /**
-  * Algorand secret mnemonic (25 BIP39 words)
-  * @typedef {string[]} AlgoSecretWords
-  */
+/**
+ * Algorand secret mnemonic (25 BIP39 words)
+ * @typedef {string[]} BipToAlgo.AlgoSecretWords
+ * @memberof BipToAlgo
+ */
 
 /**
- * @typedef  {Object}           AlgoAddressData
+ * @typedef  {Object}           BipToAlgo.AlgoAddressData
+ * @memberof BipToAlgo
  * @property {string}           key
  * @property {string}           pub
  * @property {string}           address
  * @property {string=}          chk
- * @property {AlgoSecretWords=} words       Algorand secret words
+ * @property {BipToAlgo.AlgoSecretWords=} words       Algorand secret words
  */
 
  /**
- * @typedef  {Object}           AlgoMnemonicData
- * @property {AlgoSecretWords}  words       Algorand secret words  
+ * @typedef  {Object}           BipToAlgo.AlgoMnemonicData
+ * @memberof BipToAlgo
+ * @property {BipToAlgo.AlgoSecretWords}  words       Algorand secret words  
  * @property {string}           chk         Mnemonic checksum
  */
 
  /**
- * @typedef  {Object}           AlgoParsedMnemonicData
+ * @typedef  {Object}           BipToAlgo.AlgoParsedMnemonicData
+ * @memberof BipToAlgo
  * @property {string}           mnemonic    Parsed Algorand mnemonic
  * @property {string}           original    Original mnemonic normalized (NFKD)
- * @property {AlgoSecretWords}  words       Algorand secret words
+ * @property {BipToAlgo.AlgoSecretWords}  words       Algorand secret words
  * @property {string}           key         Private key in hexadecimal
  * @property {string}           checksum    Mnemonic checksum
  * @property {boolean}          valid       Mnemonic validity
  */
 
   /**
- * @typedef  {Object}    Bip39ParsedMnemonicData
+ * @typedef  {Object}    BipToAlgo.Bip39ParsedMnemonicData
+ * @memberof BipToAlgo
  * @property {string}    mnemonic    Parsed Algorand mnemonic
  * @property {string}    original    Original mnemonic normalized (NFKD)
  * @property {string[]}  words       Algorand secret words
@@ -125,13 +135,14 @@ const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.lo
  */
 
 /**
- * Returns {@link DerivationNode} from arguments
- * @param {(string|WordArray)} kL   Leftmost 32 bytes of private key
- * @param {(string|WordArray)} kR   Rightmost 32 bytes of private Key
- * @param {{A: (string|WordArray), 
- *  c: (string|WordArray), 
- *  p: (string|WordArray)}} args
- * @returns {DerivationNode} Derivation node
+ * Returns {@link BipToAlgo.DerivationNode} from arguments
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} kL   Leftmost 32 bytes of private key
+ * @param {(string|BipToAlgo.WordArray)} kR   Rightmost 32 bytes of private Key
+ * @param {{A: (string|BipToAlgo.WordArray), 
+ *  c: (string|BipToAlgo.WordArray), 
+ *  p: (string|BipToAlgo.WordArray)}} args
+ * @returns {BipToAlgo.DerivationNode} Derivation node
  */
 const _NODE = (kL,kR, ...args) => { 
     [ A, c, p ] = args
@@ -139,7 +150,9 @@ const _NODE = (kL,kR, ...args) => {
     var dumps = () => kL.toString()
     return o
 }
-// assertion utility function
+/** Assertion utility function
+ * @returns {boolean}
+ */
 function _assert(x, y, op='eq'){
     // console.log(x, op, y)
     exp = false
@@ -153,16 +166,18 @@ function _assert(x, y, op='eq'){
 }
 /**
  * Convert integers to BIP39 words
+ * @memberof BipToAlgo
  * @param {number[]} nums 11-bit unsigned integers
  * @returns {string[]} List of BIP39 words
  */
 const numsToWords = nums => nums.reduce((p,c) => [...p, bip39words[c]],[])
 /**
  * Convert {@link https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki#from-mnemonic-to-seed|BIP39} mnemonic to seed
+ * @memberof BipToAlgo
  * @param {string} mnemonic    Mnemonic (12-24 words delimited by single space)
  * @param {string} passphrase  Passphrase as suffix for the salt
  * @param {string=} prefix     Modifier as prefix for the salt
- * @returns {WordArray} Seed
+ * @returns {BipToAlgo.WordArray} Seed
  */
 function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
     return new Promise(function(resolve,reject){
@@ -178,8 +193,9 @@ function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
 }
 /**
  * Get elliptic curve parameters
+ * @memberof BipToAlgo
  * @param {string} curveName Name of the elliptic curve
- * @returns {CurveParams} Curve parameters
+ * @returns {BipToAlgo.CurveParams} Curve parameters
  */
 function curveInfo(curveName){
     curves = {
@@ -205,10 +221,11 @@ function curveInfo(curveName){
  * Derive root key (master node) using SLIP10 specs or
  * implementing paper from D. Khovratovich and J. Law
  * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
- * @param {WordArray}   seed Entropy to derive root key
- * @param {CurveParams} curve Curve parameters
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.WordArray}   seed Entropy to derive root key
+ * @param {BipToAlgo.CurveParams} curve Curve parameters
  * @param {string}      [method='slip10'] Derivation method (slip10|kholaw)
- * @returns {Promise<DerivationNode>} Promise with derivation node
+ * @returns {Promise<BipToAlgo.DerivationNode>} Promise with derivation node
  */
 function rootKey(seed, curve, method='slip10'){
     return new Promise((res,error)=>{
@@ -270,8 +287,9 @@ function rootKey(seed, curve, method='slip10'){
 }
 /**
  * Computes public key for given curve
- * @param {(string|WordArray)} key Private key
- * @param {CurveParams} curve Curve parameters
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} key Private key
+ * @param {BipToAlgo.CurveParams} curve Curve parameters
  * @returns {string} Public key in hexadecimal
  */
 function getPublicKey(key,curve){
@@ -294,11 +312,12 @@ function getPublicKey(key,curve){
 }
 /**
  * Derives child key from parent key data using SLIP10 specs
- * @param {(string|WordArray)} parentKey    Parent node private key
- * @param {WordArray} parentChaincode       Parent node chain code
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} parentKey    Parent node private key
+ * @param {BipToAlgo.WordArray} parentChaincode       Parent node chain code
  * @param {number} i                        Current path index
- * @param {CurveParams} curve               Curve params
- * @returns {Promise<DerivationNode>}       Child node
+ * @param {BipToAlgo.CurveParams} curve               Curve params
+ * @returns {Promise<BipToAlgo.DerivationNode>}       Child node
  */
 function deriveChild(parentKey, parentChaincode, i, curve){
     return new Promise((res,error)=>{
@@ -339,6 +358,7 @@ function deriveChild(parentKey, parentChaincode, i, curve){
 }
 /**
  * Encodes elliptic curve X-coordinate into Y-coordinate
+ * @memberof BipToAlgo
  * @param {string} x X-coordinate bytes in hexadecimal
  * @param {string} y Y-coordinate bytes in hexadecimal
  */
@@ -353,9 +373,10 @@ function encodeXY(x,y){
 /**
  * Derive child key by implementing paper from D. Khovratovich and J. Law
  * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
- * @param {DerivationNode} node         Parent node
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.DerivationNode} node         Parent node
  * @param {number} i                    Current path index
- * @returns {Promise<DerivationNode>}   Child node
+ * @returns {Promise<BipToAlgo.DerivationNode>}   Child node
  */
 function deriveChildKhoLaw(node, i){
     ENTER('DERIVE CHILD KHO-LAW')
@@ -442,9 +463,10 @@ function deriveChildKhoLaw(node, i){
 }
 
  /**
-  * Computes Algorand address and mnemonic from {@link DerivationNode}
-  * @param {DerivationNode} node
-  * @returns {Promise<DerivationNode>} Derivation node with Algorand's secret 
+  * Computes Algorand address and mnemonic from {@link BipToAlgo.DerivationNode}
+  * @memberof BipToAlgo
+  * @param {BipToAlgo.DerivationNode} node
+  * @returns {Promise<BipToAlgo.DerivationNode>} Derivation node with Algorand's secret 
   */
 function algoSecret(node){
     ENTER('ALGORAND SECRET')
@@ -467,8 +489,9 @@ function algoSecret(node){
 
 /**
  * Derives Algorand's public key from private key
- * @param {(string|WordArray)} key
- * @returns {AlgoAddressData} Algorand's address data
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} key
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
  */
 function algoAddress(key){
     key = key.toString().padStart(64,'0')
@@ -479,8 +502,9 @@ function algoAddress(key){
 }
 /**
  * Translates Algorand private key to mnemonic words
+ * @memberof BipToAlgo
  * @param {string} key Private key in hexadecimal
- * @returns {AlgoMnemonicData} Algorand's mnemonic data
+ * @returns {BipToAlgo.AlgoMnemonicData} Algorand's mnemonic data
  */
 function algoMnemonic(key){
     nums = utils.bytes2b11(utils.hexToBytes(key))
@@ -493,14 +517,16 @@ function algoMnemonic(key){
 }
 /**
  * Generates random Algorand address
- * @returns {AlgoAddressData} Algorand's address data
+ * @memberof BipToAlgo
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
  */
 const randomAlgoAddress = () => utils.randomHex(32).then(ent => algoAddress(ent))
 
 /**
  * Translates Algorand mnemonic to private key
+ * @memberof BipToAlgo
  * @param {string} mnemonic 
- * @returns {AlgoParsedMnemonicData} Algorand's parsed mnemonic data
+ * @returns {BipToAlgo.AlgoParsedMnemonicData} Algorand's parsed mnemonic data
  */
 function algoKeyFromMnemonic(mnemonic){
     mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
@@ -530,8 +556,9 @@ function algoKeyFromMnemonic(mnemonic){
 }
 /**
  * Derives Algorand public key and address
+ * @memberof BipToAlgo
  * @param {string} mnemonic Algorand mnemonic
- * @returns {AlgoAddressData} Algorand's address data
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
  */
 function algoAddressFromMnemonic(mnemonic){
     var { key, words, valid } = algoKeyFromMnemonic(mnemonic)
@@ -541,6 +568,7 @@ function algoAddressFromMnemonic(mnemonic){
 }
 /**
  * Generates N random addresses and counts occurrences of last character
+ * @memberof BipToAlgo
  * @param {number} [n=1000] Number of addresses to generate
  * @returns {void} Nothing
  */
@@ -561,8 +589,9 @@ function countAddressEnding(n=1000){
 }
 /**
  * Computes Algorand address and mnemonic from private key
+ * @memberof BipToAlgo
  * @param {string} key Private key in hexadecimal
- * @returns {AlgoAddressData} Algorand's address data
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
  */
 function algoWords(key){
     return new Promise((res,error)=>{
@@ -574,10 +603,11 @@ function algoWords(key){
 }
 /**
  * Derives Algorand's secret from BIP39 seed and using given method and path
- * @param {WordArray}   seed    BIP39 seed bytes
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.WordArray}   seed    BIP39 seed bytes
  * @param {string}      method  Derivation method
  * @param {string=}     path    Derivation path
- * @returns {Promise<DerivationNode>} Derivation node with Algorand's secret
+ * @returns {Promise<BipToAlgo.DerivationNode>} Derivation node with Algorand's secret
  */
 function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
     TRACE('method',method)
@@ -626,13 +656,14 @@ function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
 }
 /**
  * Derives Algorand's secret from BIP39 mnemonic and using given method and path
+ * @memberof BipToAlgo
  * @param   {string}    mnemonic    BIP39 mnemonic
  * @param   {string}    method      Derivation method
  * @param   {string=}   path        Derivation path
  * @param   {string=}   passphrase  BIP39 mnemonic passphrase
- * @returns {Promise<DerivationNode>} Derivation node with Algorand secret
+ * @returns {Promise<BipToAlgo.DerivationNode>} Derivation node with Algorand secret
  * @example
- * // returns:
+ * // Returns:
  * // 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
  * // NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
  * //  1. sorry       6. laugh      11. setup      16. employ     21. favorite   
@@ -654,7 +685,8 @@ function deriveMnemonic(mnemonic, method, path, passphrase=''){
 }
 /**
  * Formats list of 25 words in a 5x5 grid, indexed Left-to-Right
- * @param {AlgoSecretWords} words - Algorand secret words
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.AlgoSecretWords} words - Algorand secret words
  * @returns {string} Formatted words list with line breaks
  */
 function prettifyWordsLTR(words){
@@ -672,7 +704,8 @@ function prettifyWordsLTR(words){
 }
 /**
  * Formats list of 25 words in a 5x5 grid, indexed Top-to-Bottom
- * @param {AlgoSecretWords} words - Algorand secret words
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.AlgoSecretWords} words - Algorand secret words
  * @returns {string} Formatted words list with line breaks
  */
 function prettifyWordsTTB(words){
@@ -687,6 +720,7 @@ function prettifyWordsTTB(words){
 }
 /**
  * Computes BIP39 checksum bits for given entropy
+ * @memberof BipToAlgo
  * @param {string} ent Entropy bytes in hexadecimal
  * @param {number} cs  Checksum length in bits
  * @returns {string} Checksum bits
@@ -697,6 +731,7 @@ function entCheckBits(ent, cs){
 }
 /**
  * Translates entropy into BIP39 mnemonic words
+ * @memberof BipToAlgo
  * @param   {string}   ent 
  * @returns {string[]} BI39 words list
  */
@@ -709,12 +744,14 @@ function ent2bip39words(ent){
 }
 /**
  * Generates random BIP39 words
+ * @memberof BipToAlgo
  * @param {number} size Entropy size in bytes (16|20|24|28|32)
  * @returns {string} Mnemonic words
  */
 const randomWords = size => utils.randomHex(size).then(r => ent2bip39words(r)).then(w => w.join(' '))
 /**
  * Find word in BIP39 wordlist
+ * @memberof BipToAlgo
  * @param {string} word BIP39 word to search
  * @returns {(string|undefined)} Found word
  */
@@ -724,8 +761,9 @@ function findBip39Word(word){
 }
 /**
  * Parses BIP39 mnemonic and verifies validity
+ * @memberof BipToAlgo
  * @param {string} mnemonic 
- * @returns {Bip39ParsedMnemonicData}
+ * @returns {BipToAlgo.Bip39ParsedMnemonicData}
  */
 function parseMnemonic(mnemonic){
     mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
@@ -748,6 +786,7 @@ function parseMnemonic(mnemonic){
 }
 /**
  * Generate dummy BIP39 mnemonic for testing
+ * @memberof BipToAlgo
  * @param {string} [word='all'] Dummy BIP39 word to repeat 
  * @param {number} [size=24]    Number of words (12|15|18|21|24)
  * @example
@@ -773,6 +812,7 @@ function testMnemonicWords(word='all',size=24){
 }
 /**
  * Derive mnemonic for given test vector
+ * @memberof BipToAlgo
  * @param {{ no: number, mnemonic: string, 
  *  method: string, path: string, key: string, 
  *  address: string }} testVector
@@ -797,6 +837,7 @@ function deriveMnemonicTest({ no, mnemonic, method, path, key, address }) {
 }
 /**
  * Run tests and log to console
+ * @memberof BipToAlgo
  * @returns {void} Nothing
  */
 function tests() {

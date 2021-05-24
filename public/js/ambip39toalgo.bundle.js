@@ -1,1187 +1,4 @@
 (function(f){if(typeof exports==="object"&&typeof module!=="undefined"){module.exports=f()}else if(typeof define==="function"&&define.amd){define([],f)}else{var g;if(typeof window!=="undefined"){g=window}else if(typeof global!=="undefined"){g=global}else if(typeof self!=="undefined"){g=self}else{g=this}g.ambip39toalgo = f()}})(function(){var define,module,exports;return (function(){function r(e,n,t){function o(i,f){if(!n[i]){if(!e[i]){var c="function"==typeof require&&require;if(!f&&c)return c(i,!0);if(u)return u(i,!0);var a=new Error("Cannot find module '"+i+"'");throw a.code="MODULE_NOT_FOUND",a}var p=n[i]={exports:{}};e[i][0].call(p.exports,function(r){var n=e[i][1][r];return o(n||r)},p,p.exports,r,e,n,t)}return n[i].exports}for(var u="function"==typeof require&&require,i=0;i<t.length;i++)o(t[i]);return o}return r})()({1:[function(require,module,exports){
-const bip39words = require('./bip39-en').words
-const utils = require('./utils')
-const hmacSHA512 = require('crypto-js/hmac-sha512')
-const hmacSHA256 = require('crypto-js/hmac-sha256')
-const PBKDF2 = require('crypto-js/pbkdf2')
-const cp = require('crypto-js');
-const EC = require('elliptic').ec;
-const EdDSA = require('elliptic').eddsa;
-const ecEd25519 = new EdDSA('ed25519');
-const ecSECP256 = new EC('secp256k1');
-const ecCurve25519 = new EC('ed25519');
-
-const BIP32KEY_HARDEN = 0x80000000
-const ed25519_n = 2n**252n + 27742317777372353535851937790883648493n
-const _ = undefined
-
-const hexilify   = cp.enc.Hex.stringify
-const unhexilify = cp.enc.Hex.parse
-
-const _hmac512  = (message, secret) => hmacSHA512(message, secret)
-const _hmac256  = (message, secret) => hmacSHA256(message, secret)
-const _getBit   = (character, pattern) => (character &  pattern) >>> 0
-const _setBit   = (character, pattern) => (character |  pattern) >>> 0
-const _clearBit = (character, pattern) => (character & ~pattern) >>> 0
-
-// In JS, to do bitwise operations with unsigned ints, follow these rules:
-// 1. Always end bitwise operations with >>> 0 so the result gets interpreted
-//    as unsigned.
-// 2. Don't use >>. If the left-most bit is 1 it will try to preseve the sign and 
-//    thus will introduce 1's to the left. Always use >>>.
-// 3. Only if the last op is >>>, >>> 0 is not necessary.
-// Source: https://stackoverflow.com/questions/6798111/bitwise-operations-on-32-bit-unsigned-ints
-const _OR  = (x,y) => (x | y) >>> 0
-const _AND = (x,y) => (x & y) >>> 0
-const _XOR = (x,y) => (x ^ y) >>> 0
-
-// Source: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
-const RED     = s => `\x1b[40m\x1b[31m${s}\x1b[0m`  //black background, red text
-const YELLOW  = s => `\x1b[40m\x1b[93m${s}\x1b[0m`  //black background, yellow text
-const GREEN   = s => `\x1b[40m\x1b[92m${s}\x1b[0m`  //black background, green text
-const GREENBG = s => `\x1b[102m\x1b[30m${s}\x1b[0m` //green background, black text
-
-const _DBUG = false
-const TRACE = (k,v, debug=_DBUG) => {
-    if(debug) console.log(k.padEnd(12),v)
-}
-const ENTER = (g   , debug=_DBUG) => { if(debug) console.group(YELLOW('ENTER ' + g)) }
-const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.log(YELLOW('LEAVE ' + g))} }
-
-/**
- * @typedef  {Object}   WordArray
- * @property {Object}   init
- * @property {number[]} init.words Bytes array as signed integers
- * @property {number}   init.sigBytes
- */
- 
- /**
- * Stores order of elliptic curve and 
- * {@link https://github.com/satoshilabs/slips/blob/master/slip-0010.md|SLIP10}
- * modifier for master key generation.
- * @typedef  {Object} CurveParams
- * @property {string} name      Name of elliptic curve
- * @property {string} modifier  Key to use in HMAC-SHA512 as per SLIP10
- * @property {BigInt} order     Order of the elliptic curve
- */
-
-/** 
- * @typedef  {Object}   AlgoData
- * @property {Object}   algo
- * @property {string}   algo.key        Algorand private key in hexadecimal
- * @property {address}  algo.address    Algorand public wallet address
- * @property {string[]} algo.words      Algorand mnemonic (25 words)
- * @property {string}   algo.pub        Algorand public key in hexadecimal
- * @property {string=}  algo.chk1       Public key cheksum
- * @property {string=}  algo.chk2       Mnemonic cheksum
- */
-
-/**
- * @typedef  {Object}              DerivationNode
- * @property {(string|WordArray)}  kL    Leftmost 32 bytes of private key
- * @property {(string|WordArray)}  kR    Rightmost 32 bytes of private Key
- * @property {(string|WordArray)=} A     32 bytes public key (y coordinatte only)
- * @property {(string|WordArray)=} c     32 bytes chain code
- * @property {(string|WordArray)=} P     32 bytes public key
- * @property {AlgoData=}           algo
- */
-
- /**
-  * Algorand secret mnemonic (25 BIP39 words)
-  * @typedef {string[]} AlgoSecretWords
-  */
-
-/**
- * @typedef  {Object}           AlgoAddressData
- * @property {string}           key
- * @property {string}           pub
- * @property {string}           address
- * @property {string=}          chk
- * @property {AlgoSecretWords=} words       Algorand secret words
- */
-
- /**
- * @typedef  {Object}           AlgoMnemonicData
- * @property {AlgoSecretWords}  words       Algorand secret words  
- * @property {string}           chk         Mnemonic checksum
- */
-
- /**
- * @typedef  {Object}           AlgoParsedMnemonicData
- * @property {string}           mnemonic    Parsed Algorand mnemonic
- * @property {string}           original    Original mnemonic normalized (NFKD)
- * @property {AlgoSecretWords}  words       Algorand secret words
- * @property {string}           key         Private key in hexadecimal
- * @property {string}           checksum    Mnemonic checksum
- * @property {boolean}          valid       Mnemonic validity
- */
-
-  /**
- * @typedef  {Object}    Bip39ParsedMnemonicData
- * @property {string}    mnemonic    Parsed Algorand mnemonic
- * @property {string}    original    Original mnemonic normalized (NFKD)
- * @property {string[]}  words       Algorand secret words
- * @property {string}    checkbits   Checksum bits
- * @property {boolean}   valid       Mnemonic validity
- */
-
-/**
- * Returns {@link DerivationNode} from arguments
- * @param {(string|WordArray)} kL   Leftmost 32 bytes of private key
- * @param {(string|WordArray)} kR   Rightmost 32 bytes of private Key
- * @param {{A: (string|WordArray), 
- *  c: (string|WordArray), 
- *  p: (string|WordArray)}} args
- * @returns {DerivationNode} Derivation node
- */
-const _NODE = (kL,kR, ...args) => { 
-    [ A, c, p ] = args
-    o = { kL, kR, A, c, p }
-    var dumps = () => kL.toString()
-    return o
-}
-// assertion utility function
-function _assert(x, y, op='eq'){
-    // console.log(x, op, y)
-    exp = false
-    exp ^= op === 'eq' & x === y
-    exp ^= op === 'gt' & x >   y
-    exp ^= op === 'ge' & x >=  y
-    exp ^= op === 'lt' & x <   y
-    exp ^= op === 'le' & x <=  y
-    if(exp) return true
-    else throw EvalError(RED(`\n${x}\nNOT ${op}\n${y}`))
-}
-/**
- * Convert integers to BIP39 words
- * @param {number[]} nums 11-bit unsigned integers
- * @returns {string[]} List of BIP39 words
- */
-const numsToWords = nums => nums.reduce((p,c) => [...p, bip39words[c]],[])
-/**
- * Convert {@link https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki#from-mnemonic-to-seed|BIP39} mnemonic to seed
- * @param {string} mnemonic    Mnemonic (12-24 words delimited by single space)
- * @param {string} passphrase  Passphrase as suffix for the salt
- * @param {string=} prefix     Modifier as prefix for the salt
- * @returns {WordArray} Seed
- */
-function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
-    return new Promise(function(resolve,reject){
-        seed = cp.PBKDF2(mnemonic.normalize('NFKD'), prefix+passphrase,{
-            hasher: cp.algo.SHA512,
-            keySize: 512 / 32,
-            iterations: 2048
-        })
-        if (seed.length === 0) reject('Error: empty seed')
-        TRACE('bip39seed',seed.toString())
-        resolve(seed)
-    })
-}
-/**
- * Get elliptic curve parameters
- * @param {string} curveName Name of the elliptic curve
- * @returns {CurveParams} Curve parameters
- */
-function curveInfo(curveName){
-    curves = {
-    secp256k1: {
-                name:'secp256k1',
-                modifier: 'Bitcoin seed',
-                order: BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141')
-            },
-    nist256p1: {
-                name:'nist256p1',
-                modifier: 'Nist256p1 seed',
-                order: BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551')
-            },
-    ed25519: {
-                name:'ed25519',
-                modifier: 'ed25519 seed',
-            }
-    }
-    return curves[curveName]
-
-}
-/**
- * Derive root key (master node) using SLIP10 specs or
- * implementing paper from D. Khovratovich and J. Law
- * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
- * @param {WordArray}   seed Entropy to derive root key
- * @param {CurveParams} curve Curve parameters
- * @param {string}      [method='slip10'] Derivation method (slip10|kholaw)
- * @returns {Promise<DerivationNode>} Promise with derivation node
- */
-function rootKey(seed, curve, method='slip10'){
-    return new Promise((res,error)=>{
-        ENTER('ROOT KEY')
-        if(method==='slip10'){
-            isAlive = true
-            while(isAlive){
-                h = hmacSHA512(seed,curve.modifier).toString()
-                kL = unhexilify(h.substr(0,64))
-                kR = unhexilify(h.substr(64))
-                if(curve.name == 'ed25519') isAlive=false
-                a = BigInt('0x'+kL)
-                if(a<curve.order && a != 0) isAlive=false
-                seed = unhexilify(h)
-            TRACE('kL',kL.toString())
-            TRACE('kR',kR.toString())
-            LEAVE()
-            res(_NODE(kL,kR))
-            }
-        } else if(method==='kholaw'){
-            c = _hmac256(unhexilify('01'+seed),curve.modifier)
-            I = _hmac512(seed, curve.modifier).toString()
-            kL = unhexilify(I.substr(0,64))
-            kR = unhexilify(I.substr(64))
-            kLb = utils.hexToBytes(kL.toString())
-            while (_getBit(kLb[31], 0b00100000) !=0){
-                seed = unhexilify(I)
-                I = _hmac512(seed, curve.modifier).toString()
-                kL = unhexilify(I.substr(0,64))
-                kR = unhexilify(I.substr(64))
-                kLb = utils.hexToBytes(kL.toString())
-            }
-
-            kLb[0]  = _clearBit( kLb[0], 0b00000111)
-            kLb[31] = _clearBit(kLb[31], 0b10000000)
-            kLb[31] =   _setBit(kLb[31], 0b01000000)
-
-            kL = unhexilify(utils.bytesToHex(kLb))
-            kLr = utils.bytesToHex(kLb.reverse())
-
-            pub  = ecCurve25519.keyFromPrivate(kLr).getPublic()
-            x = pub.getX().toString('hex')
-            y = pub.getY().toString('hex')
-            A = encodeXY(x,y)
-
-            TRACE('scalar', BigInt('0x'+kLr).toString(10))
-            TRACE('x',x)
-            TRACE('y',y)
-
-            TRACE('kL',kL.toString())
-            TRACE('kR',kR.toString())
-            TRACE('A',A)
-            TRACE('c',c.toString())
-            LEAVE()
-
-            res(_NODE(kL,kR,A,c))
-        }
-    })
-}
-/**
- * Computes public key for given curve
- * @param {(string|WordArray)} key Private key
- * @param {CurveParams} curve Curve parameters
- * @returns {string} Public key in hexadecimal
- */
-function getPublicKey(key,curve){
-    if (curve.name == 'ed25519'){
-        k = '00' + utils.bytesToHex(ecEd25519.keyFromSecret(key.toString()).getPublic())
-    }
-    else if(curve.name == 'secp256k1'){
-        pub  = ecSECP256.keyFromPrivate(key.toString()).getPublic()
-        x    = pub.getX().toString('hex') // BN -> hex
-        y    = pub.getY().toString('hex') // BN -> hex
-        padx = x.padStart(64,'0')
-        pady = y.padStart(64,'0')
-        if (BigInt('0x' + y) & 1n) {
-            k = '03' + padx
-        } else{
-            k = '02' + padx
-        }
-}
-    return k
-}
-/**
- * Derives child key from parent key data using SLIP10 specs
- * @param {(string|WordArray)} parentKey    Parent node private key
- * @param {WordArray} parentChaincode       Parent node chain code
- * @param {number} i                        Current path index
- * @param {CurveParams} curve               Curve params
- * @returns {Promise<DerivationNode>}       Child node
- */
-function deriveChild(parentKey, parentChaincode, i, curve){
-    return new Promise((res,error)=>{
-        ENTER('DERIVE CHILD SLIP10')
-        data = ''
-        if(_AND(i, BIP32KEY_HARDEN)){
-            data = '00' + parentKey.toString()
-        } else {
-            data = getPublicKey(parentKey, curve)
-        }
-        data += i.toString(16).padStart(8,0) //padded 4 bytes
-
-        while(true){
-            h = hmacSHA512(unhexilify(data), parentChaincode).toString()
-            kL = unhexilify(h.substr(0,64))
-            kR = unhexilify(h.substr(64))
-            if(curve.name == 'ed25519') break
-            a = BigInt('0x'+kL)
-            key = (a + BigInt('0x' + parentKey)) % curve.order
-
-            if(a<curve.order &&  key!= 0){
-                kL = unhexilify(key.toString(16).padStart(64,0))
-                break
-            }
-            data = '01' + hexilify(kR) +  i.toString(16).padStart(8,0)
-        }
-
-        pub = getPublicKey(kL,curve)
-
-        o = _NODE(kL,kR,_,_,pub)
-
-        TRACE('private',o.kL.toString().padStart(64,0))
-        TRACE('chain',o.kR.toString().padStart(64,0))
-        TRACE('public',o.p)
-        LEAVE()
-        res(o)
-    })
-}
-/**
- * Encodes elliptic curve X-coordinate into Y-coordinate
- * @param {string} x X-coordinate bytes in hexadecimal
- * @param {string} y Y-coordinate bytes in hexadecimal
- */
-function encodeXY(x,y){
-    xb = utils.hexToBytes(x)
-    yb = utils.hexToBytes(y)
-    if(_AND(xb[31],1)){
-        yb[0] = (yb[0] | 0x80) >>> 0
-    }
-    return utils.bytesToHex(yb.reverse())
-}
-/**
- * Derive child key by implementing paper from D. Khovratovich and J. Law
- * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
- * @param {DerivationNode} node         Parent node
- * @param {number} i                    Current path index
- * @returns {Promise<DerivationNode>}   Child node
- */
-function deriveChildKhoLaw(node, i){
-    ENTER('DERIVE CHILD KHO-LAW')
-    return new Promise((res,error)=>{
-        kLP = node.kL
-        kRP = node.kR
-        AP = node.A
-        cP = node.c
-
-        ib = utils.reverseHex(i.toString(16).padStart(4*2,'0'))
-        
-        // TRACE('\nDERIVE CHILD KEY:','')
-        TRACE('kLP',hexilify(kLP))
-        TRACE('kRP',hexilify(kRP))
-        TRACE('AP',AP)
-        TRACE('cP',hexilify(cP))
-        TRACE('i',i)
-        TRACE('ib',ib)
-
-        if(i < 2**31){
-            // regular child
-            Zi = '02' + AP + ib
-            ci = '03' + AP + ib
-            Z = _hmac512(unhexilify(Zi), cP).toString()
-            c = _hmac512(unhexilify(ci), cP).toString().substr(-32*2)
-            TRACE('Zi reg',Zi)
-            TRACE('ci reg',ci)
-        } else{
-            // hardened child
-            Zi = '00' + hexilify(kLP) + hexilify(kRP) + ib
-            ci = '01' + hexilify(kLP) + hexilify(kRP) + ib
-            Z = _hmac512(unhexilify(Zi), cP).toString().toString()
-            c = _hmac512(unhexilify(ci), cP).toString().substr(-32*2)
-            TRACE('Zi hard',Zi)
-            TRACE('ci hard',ci)
-        }
-        TRACE('Z',Z)
-        TRACE('c',c)
-
-        ZL = unhexilify(Z.substr(0,28*2))
-        ZR = unhexilify(Z.substr(32*2))
-
-        // compute KRi
-        kLn = BigInt('0x'+utils.reverseHex(hexilify(ZL))) * 8n 
-            + BigInt('0x'+utils.reverseHex(hexilify(kLP)))
-        
-        TRACE('ZL',ZL.toString())
-        TRACE('ZR',ZR.toString())
-        TRACE('kLn',kLn.toString(16))
-
-        if(kLn % ed25519_n == 0n){
-            TRACE('kLn is 0','kLn % ed25519')
-            res()
-        }
-
-        // compute KLi
-        kRn = (
-            BigInt('0x'+utils.reverseHex(hexilify(ZR)))
-          + BigInt('0x'+utils.reverseHex(hexilify(kRP)))
-             ) % 2n**256n
-
-        TRACE('kRn',kRn.toString(16))
-
-        kL = utils.reverseHex(kLn.toString(16))
-        kR = utils.reverseHex(kRn.toString(16))
-        TRACE('kL',kL.toString(16))
-        TRACE('kR',kR.toString(16))
-
-        pub  = ecCurve25519.keyFromPrivate(utils.reverseHex(kL)).getPublic()
-
-        x = pub.getX().toString('hex')
-        y = pub.getY().toString('hex')
-        A = encodeXY(x,y)
-
-        TRACE('scalar', BigInt('0x'+utils.reverseHex(kL)).toString(10))
-        TRACE('x',x)
-        TRACE('y',y)
-        TRACE('A',A)
-        LEAVE()
-
-        o =_NODE(unhexilify(kL),unhexilify(kR),A,unhexilify(c))
-        res(o)
-    })
-}
-
- /**
-  * Computes Algorand address and mnemonic from {@link DerivationNode}
-  * @param {DerivationNode} node
-  * @returns {Promise<DerivationNode>} Derivation node with Algorand's secret 
-  */
-function algoSecret(node){
-    ENTER('ALGORAND SECRET')
-    return new Promise((res,error)=>{
-        var { key, pub, address, chk } = algoAddress(node.kL)
-        chk1 = chk
-        var { words, chk } = algoMnemonic(key)
-        chk2 = chk
-        TRACE('key',key)
-        TRACE('pub',pub)
-        TRACE('pub_chk',chk1)
-        TRACE('addr',address)
-        TRACE('mnemo_chk',chk2)
-        TRACE('words',words)
-        LEAVE()
-        node.algo = { key,address,words,pub,chk1,chk2 }
-        res(node)
-    })
-}
-
-/**
- * Derives Algorand's public key from private key
- * @param {(string|WordArray)} key
- * @returns {AlgoAddressData} Algorand's address data
- */
-function algoAddress(key){
-    key = key.toString().padStart(64,'0')
-    pub = utils.bytesToHex(ecEd25519.keyFromSecret(key).getPublic())
-    chk = hexilify(cp.SHA512t256(unhexilify(pub))).substr(0,64).substr(-8)
-    address = utils.hex2b32(pub+chk).replace(/=/g,'')
-    return { key, pub, address, chk }
-}
-/**
- * Translates Algorand private key to mnemonic words
- * @param {string} key Private key in hexadecimal
- * @returns {AlgoMnemonicData} Algorand's mnemonic data
- */
-function algoMnemonic(key){
-    nums = utils.bytes2b11(utils.hexToBytes(key))
-    words = numsToWords(nums)
-    chk = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
-    chkN = utils.bytes2b11(utils.hexToBytes(chk))
-    chkW = numsToWords(chkN)[0]
-    words.push(chkW)
-    return { words, chk }
-}
-/**
- * Generates random Algorand address
- * @returns {AlgoAddressData} Algorand's address data
- */
-const randomAlgoAddress = () => utils.randomHex(32).then(ent => algoAddress(ent))
-
-/**
- * Translates Algorand mnemonic to private key
- * @param {string} mnemonic 
- * @returns {AlgoParsedMnemonicData} Algorand's parsed mnemonic data
- */
-function algoKeyFromMnemonic(mnemonic){
-    mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
-    if(mnemonic.length !== 25) throw new Error('Invalid mnemonic length: expected 25 words')
-    words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
-    nums = words.map(w => bip39words.findIndex(bw => bw==w))
-    if(nums.length !== 25) throw new Error('Invalid mnemonic: one or more words not valid')
-    // last word is the checksum:
-    csN1 = nums.slice(-1)[0]
-    cs1 = csN1.toString(16)
-    // convert 11-bit numbers (little endian) to bits:
-    bits = nums.slice(0,24).map((e,i) => e.toString(2).padStart(11,'0')).reverse().join('')
-    key = utils.reverseHex(utils.bits2hex(bits)).substr(0,64)
-    // compute the checksum to verify mnemonic:
-    cs2 = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
-    csN2 = utils.bytes2b11(utils.hexToBytes(cs2))[0]
-    isValid = csN1 === csN2
-    parsed = { 
-        mnemonic:words.join(' '),
-        original: mnemonic.join(' '),
-        words:words,
-        key:key,
-        checksum:cs1, 
-        valid:isValid,
-    }
-    return parsed
-}
-/**
- * Derives Algorand public key and address
- * @param {string} mnemonic Algorand mnemonic
- * @returns {AlgoAddressData} Algorand's address data
- */
-function algoAddressFromMnemonic(mnemonic){
-    var { key, words, valid } = algoKeyFromMnemonic(mnemonic)
-    if(!valid) throw new Error('Invalid mnemonic checksum')
-    var { pub, address } = algoAddress(key)
-    return { key, pub, address, words }
-}
-/**
- * Generates N random addresses and counts occurrences of last character
- * @param {number} [n=1000] Number of addresses to generate
- * @returns {void} Nothing
- */
-function countAddressEnding(n=1000){
-    let b32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.split('')
-    let b32map = Object.fromEntries(new Map(b32.map(e => [e,0])))
-    let endChars = utils.range(n).map((e,i,a) => randomAlgoAddress().then(algo => {
-        if((i+1)%1000==0) console.log(i, algo.address)
-        return algo.address.substr(-1)
-    }))
-    Promise.all(endChars).then(chars => {
-        for (let i = chars.length - 1; i >= 0; i--) {
-            let c = chars[i]
-            b32map[c]++
-        }
-        console.log(b32map)
-    })
-}
-/**
- * Computes Algorand address and mnemonic from private key
- * @param {string} key Private key in hexadecimal
- * @returns {AlgoAddressData} Algorand's address data
- */
-function algoWords(key){
-    return new Promise((res,error)=>{
-        var { pub, address } = algoAddress(key)
-        var { words } = algoMnemonic(key)
-        algo = { key, pub, address, words }
-        res(algo)
-    })
-}
-/**
- * Derives Algorand's secret from BIP39 seed and using given method and path
- * @param {WordArray}   seed    BIP39 seed bytes
- * @param {string}      method  Derivation method
- * @param {string=}     path    Derivation path
- * @returns {Promise<DerivationNode>} Derivation node with Algorand's secret
- */
-function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
-    TRACE('method',method)
-    TRACE('path',path)
-
-    if(method==='bip39-seed'){
-        let o = _NODE()
-        o.seed = seed
-        o.bip39seed = seed.toString()
-        o.kL = unhexilify(seed.toString().substr(0,32*2))
-        TRACE('kL',o.kL.toString().padStart(64,0))
-        return algoSecret(o)
-    }
-
-    curve = curveInfo(method.split('-')[1])
-    method = method.split('-')[0]
-
-    return rootKey(seed,curve,method)
-    .then(root => {
-        TRACE('m_private',root.kL.toString())
-        TRACE('m_chain',root.kR.toString())
-
-        path = path.split('/')
-        // path.shift(0)
-        if(path.indexOf('m') === 0) [ignore, ...path] = path
-
-        return path.reduce((p,c,i,a) => {
-            return p.then(o=>{
-                idx = parseInt(c)
-                if (c.substr(-1) === "'") idx = _OR(idx, BIP32KEY_HARDEN)
-                if (curve.name === 'ed25519' && method == 'slip10') idx = _OR(idx, BIP32KEY_HARDEN)
-                currPath = a.slice(0,i+1).join('/')
-                ENTER(currPath)
-                TRACE('parent key',o.kL.toString())
-                if(method=='slip10') return deriveChild(o.kL, o.kR, idx, curve).then(o=>{ LEAVE(''); return o })
-                if(method=='kholaw') return deriveChildKhoLaw(o, idx).then(o=>{ LEAVE(''); return o })
-            })
-        }, Promise.resolve(root))
-        .then(o=>{
-            o.seed = seed
-            o.bip39seed = seed.toString()
-            return o
-        })
-    })
-    .then(node => algoSecret(node))
-}
-/**
- * Derives Algorand's secret from BIP39 mnemonic and using given method and path
- * @param   {string}    mnemonic    BIP39 mnemonic
- * @param   {string}    method      Derivation method
- * @param   {string=}   path        Derivation path
- * @param   {string=}   passphrase  BIP39 mnemonic passphrase
- * @returns {Promise<DerivationNode>} Derivation node with Algorand secret
- * @example
- * // returns:
- * // 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
- * // NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
- * //  1. sorry       6. laugh      11. setup      16. employ     21. favorite   
- * //  2. aisle       7. tissue     12. kit        17. call       22. gaze       
- * //  3. similar     8. upset      13. isolate    18. venture    23. maximum    
- * //  4. royal       9. volcano    14. bonus      19. item       24. abandon    
- * //  5. unveil     10. beach      15. poem       20. snack      25. leave
- * mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
- * deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
- * .then(node => {
- *     console.log(node.algo.key)
- *     console.log(node.algo.address)
- *     words = prettifyWordsTTB(node.algo.words)
- *     console.log(words)
- * })
- */
-function deriveMnemonic(mnemonic, method, path, passphrase=''){
-    return bip39seed(mnemonic,passphrase).then(seed => deriveBip39Seed(seed, method, path))
-}
-/**
- * Formats list of 25 words in a 5x5 grid, indexed Left-to-Right
- * @param {AlgoSecretWords} words - Algorand secret words
- * @returns {string} Formatted words list with line breaks
- */
-function prettifyWordsLTR(words){
-    prettyWords = []
-    row = []
-    words.map((w,i)=>{
-            w = ((i+1).toString().padStart(2) + '. ' + w).padEnd(15)
-            row.push(w)
-            if((i+1)%5==0) {
-                prettyWords.push(row.join(''))
-                row = []
-            }
-        })
-    return prettyWords.join('\n')
-}
-/**
- * Formats list of 25 words in a 5x5 grid, indexed Top-to-Bottom
- * @param {AlgoSecretWords} words - Algorand secret words
- * @returns {string} Formatted words list with line breaks
- */
-function prettifyWordsTTB(words){
-    prettyWords = words.map((w,i)=>{
-        w = ((i+1).toString().padStart(2) + '. ' + w).padEnd(15)
-        if(i>=20) w += '\n'
-        return w
-    }).map((w,i,a)=>{
-        return a[5*(i%5) + Math.floor(i/5)]
-    })
-    return prettyWords.join('')
-}
-/**
- * Computes BIP39 checksum bits for given entropy
- * @param {string} ent Entropy bytes in hexadecimal
- * @param {number} cs  Checksum length in bits
- * @returns {string} Checksum bits
- */
-function entCheckBits(ent, cs){
-    chk = cp.SHA256(unhexilify(ent)).toString().substr(0,2) //get first byte
-    return utils.hex2bits(chk).substr(0,cs).padStart(cs)
-}
-/**
- * Translates entropy into BIP39 mnemonic words
- * @param   {string}   ent 
- * @returns {string[]} BI39 words list
- */
-function ent2bip39words(ent){
-    cs = ent.length*8/2/32
-    entChecked = utils.hex2bits(ent).substr(0,ent.length*8/2+cs)+entCheckBits(ent,cs)
-    nums = utils.bits2uintN(11,entChecked)
-    wlist = numsToWords(nums)
-    return wlist
-}
-/**
- * Generates random BIP39 words
- * @param {number} size Entropy size in bytes (16|20|24|28|32)
- * @returns {string} Mnemonic words
- */
-const randomWords = size => utils.randomHex(size).then(r => ent2bip39words(r)).then(w => w.join(' '))
-/**
- * Find word in BIP39 wordlist
- * @param {string} word BIP39 word to search
- * @returns {(string|undefined)} Found word
- */
-function findBip39Word(word){
-    w = word.trim().toLowerCase().normalize('NFKD').substr(0,4)
-    return bip39words.find(bw => bw.substr(0,4)==w)
-}
-/**
- * Parses BIP39 mnemonic and verifies validity
- * @param {string} mnemonic 
- * @returns {Bip39ParsedMnemonicData}
- */
-function parseMnemonic(mnemonic){
-    mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
-    words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
-    nums = words.map(w => bip39words.findIndex(bw => bw==w))
-    bits = utils.uintN2bits(11,nums)
-    cs = bits.length % 32
-    ent = utils.bits2hex(bits.substr(0,bits.length-cs))
-    chkBits1 = bits.substr(-cs)
-    chkBits2 = entCheckBits(ent, cs)
-    isValid = chkBits1 === chkBits2
-    parsed = { 
-        mnemonic:words.join(' '),
-        original: mnemonic.join(' '),
-        words:words, 
-        checkbits:chkBits1, 
-        valid:isValid,
-    }
-    return parsed
-}
-/**
- * Generate dummy BIP39 mnemonic for testing
- * @param {string} [word='all'] Dummy BIP39 word to repeat 
- * @param {number} [size=24]    Number of words (12|15|18|21|24)
- * @example
- * // returns "dog dog dog dog dog dog dog dog dog dog dog dose"
- * console.log(testMnemonicWords('dog',12).join(' '))
- * @example
- * // returns "boy boy boy boy boy boy boy boy boy boy boy boy boy boy boss"
- * console.log(testMnemonicWords('boy',15).join(' '))
- * @example
- * // returns "bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety"
- * console.log(testMnemonicWords('bar',24).join(' '))
- */
-function testMnemonicWords(word='all',size=24){
-    dummyMnemonic = `${word.trim()} `.repeat(size).trim()
-    mnemonic = dummyMnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
-    words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
-    nums = words.map(w => bip39words.findIndex(bw => bw==w))
-    bits = utils.uintN2bits(11,nums)
-    cs = bits.length % 32
-    ent = utils.bits2hex(bits.substr(0,bits.length-cs))
-    // chkBits = entCheckBits(ent, cs)
-    return ent2bip39words(ent)
-}
-/**
- * Derive mnemonic for given test vector
- * @param {{ no: number, mnemonic: string, 
- *  method: string, path: string, key: string, 
- *  address: string }} testVector
- * @returns {void} Nothing
- */
-function deriveMnemonicTest({ no, mnemonic, method, path, key, address }) {
-    ENTER(`Test #${no}: ${method}`, true)
-    return deriveMnemonic(mnemonic, method, path)
-    .then(o=>{
-        // console.log(o.algo)
-        TRACE('test key', key, true)
-        TRACE('test address', address, true)
-        let { valid } = parseMnemonic(mnemonic)
-        _assert(valid, true)
-        _assert(o.algo.key, key)
-        _assert(o.algo.address, address)
-        console.log(prettifyWordsLTR(o.algo.words))
-        TRACE(GREENBG('assertion'), GREENBG('OK'), true)
-        return true
-    })
-    .then(done => LEAVE('', true))
-}
-/**
- * Run tests and log to console
- * @returns {void} Nothing
- */
-function tests() {
-    vectors = [
-        { 
-            no:         1,
-            mnemonic:   'all all all all all all all all all all all all all all all all all all all all all all all feel',
-            method:     wallets.ledger.method,
-            path:       wallets.ledger.path,
-            key:        '1075ab5e3fcedcb69eef77974b314cc0cbc163c01a0c354989dc70b8789a194f',
-            address:    'NVGXFOROGBDBUW6CEQDX6V742PWFPLXUDKW6V7HOZHFD7GSQEB556GUZII'
-        },
-        { 
-            no:         2,
-            mnemonic:   'all all all all all all all all all all all all all all all all all all all all all all all feel',
-            method:     wallets.coinomi.method,
-            path:       wallets.coinomi.path,
-            key:        '7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11',
-            address:    'NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA'
-        },
-        { 
-            no:         3,
-            mnemonic:   'all all all all all all all all all all all all',
-            method:     wallets.exodus.method,
-            path:       wallets.exodus.path,
-            key:        '0c9b6a753e82afef190302853c14cdadc8d229cec3196ee464e41f0bc5c2519e',
-            address:    'ZXLNDDUAYCYFXJI33HXUXLNVUTMQMSG6HRXV6JT2KNSU2SP4J7GUZG5BWU'
-        },
-        { 
-            no:         4,
-            mnemonic:   'all all all all all all all all all all all all',
-            method:     wallets.atomic.method,
-            path:       wallets.atomic.path,
-            key:        'c76c4ac4f4e4a00d6b274d5c39c700bb4a7ddc04fbc6f78e85ca75007b5b495f',
-            address:    'YQDDGDM3BKPQ5RAIYGCT7JX6DCIMVQHTHITSPJWKNLIPETB2JR6MPKC43A'
-        },
-        { 
-            no:         5,
-            mnemonic:   'bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety',
-            method:     wallets.ledger.method,
-            path:       wallets.ledger.path,
-            key:        'c896059cbb23f5e29692ce23c5c56aeea6376ae63dfb513e03e42b75be51e646',
-            address:    'KS4ACRBVNAKFAEKK5XWV5HV355FDPBRNG37VTJYU646WLAGWD26L6FSIRA'
-        },
-        { 
-            no:         6,
-            mnemonic:   'bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety',
-            method:     wallets.trust.method,
-            path:       wallets.trust.path,
-            key:        '83fffaec238ae65b1ef4195d01d6c670348335f78ee6407e70c07cd356cd462e',
-            address:    'DDVQJSNA7KMZAR3WTZXQHB53KKXHI7AGQOQSPLQL4Y5PTY7IMNTATQMTAE'
-        },
-        { 
-            no:         7,
-            mnemonic:   'dog dog dog dog dog dog dog dog dog dog dog dose',
-            method:     wallets.exodus.method,
-            path:       wallets.exodus.path,
-            key:        '9bcbf75ea8b0997771c19e8440e3bce7675374bbe926f608cdbf671d42171966',
-            address:    'QKYJ7CY3ZDJZ7GZE7FJ6S5WK5MKKTNBJBS2L7B2LUKSHSMEJWFG4KIS3FI'
-        },
-        { 
-            no:         8,
-            mnemonic:   'dog dog dog dog dog dog dog dog dog dog dog dose',
-            method:     wallets.atomic.method,
-            path:       wallets.atomic.path,
-            key:        '0eed13381c206469210932dd7f58b0a84b9d44b1b63e9f963b0d4c4d1baead3f',
-            address:    'CWEAA3OJTGY2IJOACHISLWAJNR6XMFNRLCD7MXRPFUBESTMMKSQ42XRBOI'
-        },
-        
-
-    ]
-    vectors.reduce((p, v, arr) => {
-        return p.then(() => deriveMnemonicTest(v))
-    },Promise.resolve())
-    .catch(console.log)
-}
-
-const wallets = {
-        atomic  :{ method: 'bip39-seed'      ,path: undefined           },
-        coinomi :{ method: 'slip10-ed25519'  ,path: "m/44'/283'/0'/0/0" },
-        exodus  :{ method: 'slip10-secp256k1',path: "m/44'/283'/0'/0/0" },
-        ledger  :{ method: 'kholaw-ed25519'  ,path: "m/44'/283'/0'/0/0" },
-        trust   :{ method: 'slip10-ed25519'  ,path: "m/44'/283'/0'/0/0" },
-    }
-
-
-//-------------------------------------------------------
-//::EXAMPLE::
-//-------------------------------------------------------
-// mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
-// deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
-// .then(node => {
-//     console.log(node.algo.key)
-//     console.log(node.algo.address)
-//     words = prettifyWordsTTB(node.algo.words)
-//     console.log(words)
-// })
-
-//-------------------------------------------------------
-//::GENERATE DUMMY MNEMONICS FOR TESTING::
-//-------------------------------------------------------
-// console.log(testMnemonicWords('dog',12).join(' '))
-// console.log(testMnemonicWords('boy',15).join(' '))
-// console.log(testMnemonicWords('bar',24).join(' '))
-
-//-------------------------------------------------------
-//::RUN TEST VECTORS::
-//-------------------------------------------------------
-// tests()
-
-module.exports = {
-    algoWords,
-    algoAddressFromMnemonic,
-    bip39seed,
-    deriveBip39Seed,
-    deriveMnemonic,
-    findBip39Word,
-    parseMnemonic,
-    randomAlgoAddress,
-    randomWords,
-    wallets,
-}
-
-},{"./bip39-en":2,"./utils":78,"crypto-js":17,"crypto-js/hmac-sha256":14,"crypto-js/hmac-sha512":15,"crypto-js/pbkdf2":30,"elliptic":44}],2:[function(require,module,exports){
-exports.words = [
-'abandon','ability','able','about','above','absent','absorb','abstract',
-'absurd','abuse','access','accident','account','accuse','achieve','acid',
-'acoustic','acquire','across','act','action','actor','actress','actual',
-'adapt','add','addict','address','adjust','admit','adult','advance',
-'advice','aerobic','affair','afford','afraid','again','age','agent',
-'agree','ahead','aim','air','airport','aisle','alarm','album',
-'alcohol','alert','alien','all','alley','allow','almost','alone',
-'alpha','already','also','alter','always','amateur','amazing','among',
-'amount','amused','analyst','anchor','ancient','anger','angle','angry',
-'animal','ankle','announce','annual','another','answer','antenna','antique',
-'anxiety','any','apart','apology','appear','apple','approve','april',
-'arch','arctic','area','arena','argue','arm','armed','armor',
-'army','around','arrange','arrest','arrive','arrow','art','artefact',
-'artist','artwork','ask','aspect','assault','asset','assist','assume',
-'asthma','athlete','atom','attack','attend','attitude','attract','auction',
-'audit','august','aunt','author','auto','autumn','average','avocado',
-'avoid','awake','aware','away','awesome','awful','awkward','axis',
-'baby','bachelor','bacon','badge','bag','balance','balcony','ball',
-'bamboo','banana','banner','bar','barely','bargain','barrel','base',
-'basic','basket','battle','beach','bean','beauty','because','become',
-'beef','before','begin','behave','behind','believe','below','belt',
-'bench','benefit','best','betray','better','between','beyond','bicycle',
-'bid','bike','bind','biology','bird','birth','bitter','black',
-'blade','blame','blanket','blast','bleak','bless','blind','blood',
-'blossom','blouse','blue','blur','blush','board','boat','body',
-'boil','bomb','bone','bonus','book','boost','border','boring',
-'borrow','boss','bottom','bounce','box','boy','bracket','brain',
-'brand','brass','brave','bread','breeze','brick','bridge','brief',
-'bright','bring','brisk','broccoli','broken','bronze','broom','brother',
-'brown','brush','bubble','buddy','budget','buffalo','build','bulb',
-'bulk','bullet','bundle','bunker','burden','burger','burst','bus',
-'business','busy','butter','buyer','buzz','cabbage','cabin','cable',
-'cactus','cage','cake','call','calm','camera','camp','can',
-'canal','cancel','candy','cannon','canoe','canvas','canyon','capable',
-'capital','captain','car','carbon','card','cargo','carpet','carry',
-'cart','case','cash','casino','castle','casual','cat','catalog',
-'catch','category','cattle','caught','cause','caution','cave','ceiling',
-'celery','cement','census','century','cereal','certain','chair','chalk',
-'champion','change','chaos','chapter','charge','chase','chat','cheap',
-'check','cheese','chef','cherry','chest','chicken','chief','child',
-'chimney','choice','choose','chronic','chuckle','chunk','churn','cigar',
-'cinnamon','circle','citizen','city','civil','claim','clap','clarify',
-'claw','clay','clean','clerk','clever','click','client','cliff',
-'climb','clinic','clip','clock','clog','close','cloth','cloud',
-'clown','club','clump','cluster','clutch','coach','coast','coconut',
-'code','coffee','coil','coin','collect','color','column','combine',
-'come','comfort','comic','common','company','concert','conduct','confirm',
-'congress','connect','consider','control','convince','cook','cool','copper',
-'copy','coral','core','corn','correct','cost','cotton','couch',
-'country','couple','course','cousin','cover','coyote','crack','cradle',
-'craft','cram','crane','crash','crater','crawl','crazy','cream',
-'credit','creek','crew','cricket','crime','crisp','critic','crop',
-'cross','crouch','crowd','crucial','cruel','cruise','crumble','crunch',
-'crush','cry','crystal','cube','culture','cup','cupboard','curious',
-'current','curtain','curve','cushion','custom','cute','cycle','dad',
-'damage','damp','dance','danger','daring','dash','daughter','dawn',
-'day','deal','debate','debris','decade','december','decide','decline',
-'decorate','decrease','deer','defense','define','defy','degree','delay',
-'deliver','demand','demise','denial','dentist','deny','depart','depend',
-'deposit','depth','deputy','derive','describe','desert','design','desk',
-'despair','destroy','detail','detect','develop','device','devote','diagram',
-'dial','diamond','diary','dice','diesel','diet','differ','digital',
-'dignity','dilemma','dinner','dinosaur','direct','dirt','disagree','discover',
-'disease','dish','dismiss','disorder','display','distance','divert','divide',
-'divorce','dizzy','doctor','document','dog','doll','dolphin','domain',
-'donate','donkey','donor','door','dose','double','dove','draft',
-'dragon','drama','drastic','draw','dream','dress','drift','drill',
-'drink','drip','drive','drop','drum','dry','duck','dumb',
-'dune','during','dust','dutch','duty','dwarf','dynamic','eager',
-'eagle','early','earn','earth','easily','east','easy','echo',
-'ecology','economy','edge','edit','educate','effort','egg','eight',
-'either','elbow','elder','electric','elegant','element','elephant','elevator',
-'elite','else','embark','embody','embrace','emerge','emotion','employ',
-'empower','empty','enable','enact','end','endless','endorse','enemy',
-'energy','enforce','engage','engine','enhance','enjoy','enlist','enough',
-'enrich','enroll','ensure','enter','entire','entry','envelope','episode',
-'equal','equip','era','erase','erode','erosion','error','erupt',
-'escape','essay','essence','estate','eternal','ethics','evidence','evil',
-'evoke','evolve','exact','example','excess','exchange','excite','exclude',
-'excuse','execute','exercise','exhaust','exhibit','exile','exist','exit',
-'exotic','expand','expect','expire','explain','expose','express','extend',
-'extra','eye','eyebrow','fabric','face','faculty','fade','faint',
-'faith','fall','false','fame','family','famous','fan','fancy',
-'fantasy','farm','fashion','fat','fatal','father','fatigue','fault',
-'favorite','feature','february','federal','fee','feed','feel','female',
-'fence','festival','fetch','fever','few','fiber','fiction','field',
-'figure','file','film','filter','final','find','fine','finger',
-'finish','fire','firm','first','fiscal','fish','fit','fitness',
-'fix','flag','flame','flash','flat','flavor','flee','flight',
-'flip','float','flock','floor','flower','fluid','flush','fly',
-'foam','focus','fog','foil','fold','follow','food','foot',
-'force','forest','forget','fork','fortune','forum','forward','fossil',
-'foster','found','fox','fragile','frame','frequent','fresh','friend',
-'fringe','frog','front','frost','frown','frozen','fruit','fuel',
-'fun','funny','furnace','fury','future','gadget','gain','galaxy',
-'gallery','game','gap','garage','garbage','garden','garlic','garment',
-'gas','gasp','gate','gather','gauge','gaze','general','genius',
-'genre','gentle','genuine','gesture','ghost','giant','gift','giggle',
-'ginger','giraffe','girl','give','glad','glance','glare','glass',
-'glide','glimpse','globe','gloom','glory','glove','glow','glue',
-'goat','goddess','gold','good','goose','gorilla','gospel','gossip',
-'govern','gown','grab','grace','grain','grant','grape','grass',
-'gravity','great','green','grid','grief','grit','grocery','group',
-'grow','grunt','guard','guess','guide','guilt','guitar','gun',
-'gym','habit','hair','half','hammer','hamster','hand','happy',
-'harbor','hard','harsh','harvest','hat','have','hawk','hazard',
-'head','health','heart','heavy','hedgehog','height','hello','helmet',
-'help','hen','hero','hidden','high','hill','hint','hip',
-'hire','history','hobby','hockey','hold','hole','holiday','hollow',
-'home','honey','hood','hope','horn','horror','horse','hospital',
-'host','hotel','hour','hover','hub','huge','human','humble',
-'humor','hundred','hungry','hunt','hurdle','hurry','hurt','husband',
-'hybrid','ice','icon','idea','identify','idle','ignore','ill',
-'illegal','illness','image','imitate','immense','immune','impact','impose',
-'improve','impulse','inch','include','income','increase','index','indicate',
-'indoor','industry','infant','inflict','inform','inhale','inherit','initial',
-'inject','injury','inmate','inner','innocent','input','inquiry','insane',
-'insect','inside','inspire','install','intact','interest','into','invest',
-'invite','involve','iron','island','isolate','issue','item','ivory',
-'jacket','jaguar','jar','jazz','jealous','jeans','jelly','jewel',
-'job','join','joke','journey','joy','judge','juice','jump',
-'jungle','junior','junk','just','kangaroo','keen','keep','ketchup',
-'key','kick','kid','kidney','kind','kingdom','kiss','kit',
-'kitchen','kite','kitten','kiwi','knee','knife','knock','know',
-'lab','label','labor','ladder','lady','lake','lamp','language',
-'laptop','large','later','latin','laugh','laundry','lava','law',
-'lawn','lawsuit','layer','lazy','leader','leaf','learn','leave',
-'lecture','left','leg','legal','legend','leisure','lemon','lend',
-'length','lens','leopard','lesson','letter','level','liar','liberty',
-'library','license','life','lift','light','like','limb','limit',
-'link','lion','liquid','list','little','live','lizard','load',
-'loan','lobster','local','lock','logic','lonely','long','loop',
-'lottery','loud','lounge','love','loyal','lucky','luggage','lumber',
-'lunar','lunch','luxury','lyrics','machine','mad','magic','magnet',
-'maid','mail','main','major','make','mammal','man','manage',
-'mandate','mango','mansion','manual','maple','marble','march','margin',
-'marine','market','marriage','mask','mass','master','match','material',
-'math','matrix','matter','maximum','maze','meadow','mean','measure',
-'meat','mechanic','medal','media','melody','melt','member','memory',
-'mention','menu','mercy','merge','merit','merry','mesh','message',
-'metal','method','middle','midnight','milk','million','mimic','mind',
-'minimum','minor','minute','miracle','mirror','misery','miss','mistake',
-'mix','mixed','mixture','mobile','model','modify','mom','moment',
-'monitor','monkey','monster','month','moon','moral','more','morning',
-'mosquito','mother','motion','motor','mountain','mouse','move','movie',
-'much','muffin','mule','multiply','muscle','museum','mushroom','music',
-'must','mutual','myself','mystery','myth','naive','name','napkin',
-'narrow','nasty','nation','nature','near','neck','need','negative',
-'neglect','neither','nephew','nerve','nest','net','network','neutral',
-'never','news','next','nice','night','noble','noise','nominee',
-'noodle','normal','north','nose','notable','note','nothing','notice',
-'novel','now','nuclear','number','nurse','nut','oak','obey',
-'object','oblige','obscure','observe','obtain','obvious','occur','ocean',
-'october','odor','off','offer','office','often','oil','okay',
-'old','olive','olympic','omit','once','one','onion','online',
-'only','open','opera','opinion','oppose','option','orange','orbit',
-'orchard','order','ordinary','organ','orient','original','orphan','ostrich',
-'other','outdoor','outer','output','outside','oval','oven','over',
-'own','owner','oxygen','oyster','ozone','pact','paddle','page',
-'pair','palace','palm','panda','panel','panic','panther','paper',
-'parade','parent','park','parrot','party','pass','patch','path',
-'patient','patrol','pattern','pause','pave','payment','peace','peanut',
-'pear','peasant','pelican','pen','penalty','pencil','people','pepper',
-'perfect','permit','person','pet','phone','photo','phrase','physical',
-'piano','picnic','picture','piece','pig','pigeon','pill','pilot',
-'pink','pioneer','pipe','pistol','pitch','pizza','place','planet',
-'plastic','plate','play','please','pledge','pluck','plug','plunge',
-'poem','poet','point','polar','pole','police','pond','pony',
-'pool','popular','portion','position','possible','post','potato','pottery',
-'poverty','powder','power','practice','praise','predict','prefer','prepare',
-'present','pretty','prevent','price','pride','primary','print','priority',
-'prison','private','prize','problem','process','produce','profit','program',
-'project','promote','proof','property','prosper','protect','proud','provide',
-'public','pudding','pull','pulp','pulse','pumpkin','punch','pupil',
-'puppy','purchase','purity','purpose','purse','push','put','puzzle',
-'pyramid','quality','quantum','quarter','question','quick','quit','quiz',
-'quote','rabbit','raccoon','race','rack','radar','radio','rail',
-'rain','raise','rally','ramp','ranch','random','range','rapid',
-'rare','rate','rather','raven','raw','razor','ready','real',
-'reason','rebel','rebuild','recall','receive','recipe','record','recycle',
-'reduce','reflect','reform','refuse','region','regret','regular','reject',
-'relax','release','relief','rely','remain','remember','remind','remove',
-'render','renew','rent','reopen','repair','repeat','replace','report',
-'require','rescue','resemble','resist','resource','response','result','retire',
-'retreat','return','reunion','reveal','review','reward','rhythm','rib',
-'ribbon','rice','rich','ride','ridge','rifle','right','rigid',
-'ring','riot','ripple','risk','ritual','rival','river','road',
-'roast','robot','robust','rocket','romance','roof','rookie','room',
-'rose','rotate','rough','round','route','royal','rubber','rude',
-'rug','rule','run','runway','rural','sad','saddle','sadness',
-'safe','sail','salad','salmon','salon','salt','salute','same',
-'sample','sand','satisfy','satoshi','sauce','sausage','save','say',
-'scale','scan','scare','scatter','scene','scheme','school','science',
-'scissors','scorpion','scout','scrap','screen','script','scrub','sea',
-'search','season','seat','second','secret','section','security','seed',
-'seek','segment','select','sell','seminar','senior','sense','sentence',
-'series','service','session','settle','setup','seven','shadow','shaft',
-'shallow','share','shed','shell','sheriff','shield','shift','shine',
-'ship','shiver','shock','shoe','shoot','shop','short','shoulder',
-'shove','shrimp','shrug','shuffle','shy','sibling','sick','side',
-'siege','sight','sign','silent','silk','silly','silver','similar',
-'simple','since','sing','siren','sister','situate','six','size',
-'skate','sketch','ski','skill','skin','skirt','skull','slab',
-'slam','sleep','slender','slice','slide','slight','slim','slogan',
-'slot','slow','slush','small','smart','smile','smoke','smooth',
-'snack','snake','snap','sniff','snow','soap','soccer','social',
-'sock','soda','soft','solar','soldier','solid','solution','solve',
-'someone','song','soon','sorry','sort','soul','sound','soup',
-'source','south','space','spare','spatial','spawn','speak','special',
-'speed','spell','spend','sphere','spice','spider','spike','spin',
-'spirit','split','spoil','sponsor','spoon','sport','spot','spray',
-'spread','spring','spy','square','squeeze','squirrel','stable','stadium',
-'staff','stage','stairs','stamp','stand','start','state','stay',
-'steak','steel','stem','step','stereo','stick','still','sting',
-'stock','stomach','stone','stool','story','stove','strategy','street',
-'strike','strong','struggle','student','stuff','stumble','style','subject',
-'submit','subway','success','such','sudden','suffer','sugar','suggest',
-'suit','summer','sun','sunny','sunset','super','supply','supreme',
-'sure','surface','surge','surprise','surround','survey','suspect','sustain',
-'swallow','swamp','swap','swarm','swear','sweet','swift','swim',
-'swing','switch','sword','symbol','symptom','syrup','system','table',
-'tackle','tag','tail','talent','talk','tank','tape','target',
-'task','taste','tattoo','taxi','teach','team','tell','ten',
-'tenant','tennis','tent','term','test','text','thank','that',
-'theme','then','theory','there','they','thing','this','thought',
-'three','thrive','throw','thumb','thunder','ticket','tide','tiger',
-'tilt','timber','time','tiny','tip','tired','tissue','title',
-'toast','tobacco','today','toddler','toe','together','toilet','token',
-'tomato','tomorrow','tone','tongue','tonight','tool','tooth','top',
-'topic','topple','torch','tornado','tortoise','toss','total','tourist',
-'toward','tower','town','toy','track','trade','traffic','tragic',
-'train','transfer','trap','trash','travel','tray','treat','tree',
-'trend','trial','tribe','trick','trigger','trim','trip','trophy',
-'trouble','truck','true','truly','trumpet','trust','truth','try',
-'tube','tuition','tumble','tuna','tunnel','turkey','turn','turtle',
-'twelve','twenty','twice','twin','twist','two','type','typical',
-'ugly','umbrella','unable','unaware','uncle','uncover','under','undo',
-'unfair','unfold','unhappy','uniform','unique','unit','universe','unknown',
-'unlock','until','unusual','unveil','update','upgrade','uphold','upon',
-'upper','upset','urban','urge','usage','use','used','useful',
-'useless','usual','utility','vacant','vacuum','vague','valid','valley',
-'valve','van','vanish','vapor','various','vast','vault','vehicle',
-'velvet','vendor','venture','venue','verb','verify','version','very',
-'vessel','veteran','viable','vibrant','vicious','victory','video','view',
-'village','vintage','violin','virtual','virus','visa','visit','visual',
-'vital','vivid','vocal','voice','void','volcano','volume','vote',
-'voyage','wage','wagon','wait','walk','wall','walnut','want',
-'warfare','warm','warrior','wash','wasp','waste','water','wave',
-'way','wealth','weapon','wear','weasel','weather','web','wedding',
-'weekend','weird','welcome','west','wet','whale','what','wheat',
-'wheel','when','where','whip','whisper','wide','width','wife',
-'wild','will','win','window','wine','wing','wink','winner',
-'winter','wire','wisdom','wise','wish','witness','wolf','woman',
-'wonder','wood','wool','word','work','world','worry','worth',
-'wrap','wreck','wrestle','wrist','write','wrong','yard','year',
-'yellow','you','young','youth','zebra','zero','zone','zoo'
-]
-
-},{}],3:[function(require,module,exports){
 (function (process,global,setImmediate){(function (){
 /* @preserve
  * The MIT License (MIT)
@@ -6962,7 +5779,7 @@ module.exports = ret;
 },{"./es5":13,"async_hooks":undefined}]},{},[4])(4)
 });                    ;if (typeof window !== 'undefined' && window !== null) {                               window.P = window.Promise;                                                     } else if (typeof self !== 'undefined' && self !== null) {                             self.P = self.Promise;                                                         }
 }).call(this)}).call(this,require('_process'),typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {},require("timers").setImmediate)
-},{"_process":227,"timers":264}],4:[function(require,module,exports){
+},{"_process":227,"timers":264}],2:[function(require,module,exports){
 (function (module, exports) {
   'use strict';
 
@@ -10410,7 +9227,7 @@ module.exports = ret;
   };
 })(typeof module === 'undefined' || module, this);
 
-},{"buffer":97}],5:[function(require,module,exports){
+},{"buffer":97}],3:[function(require,module,exports){
 var r;
 
 module.exports = function rand(len) {
@@ -10477,7 +9294,7 @@ if (typeof self === 'object') {
   }
 }
 
-},{"crypto":97}],6:[function(require,module,exports){
+},{"crypto":97}],4:[function(require,module,exports){
 //     create-error.js 0.3.1
 //     (c) 2013 Tim Griesser
 //     This source may be freely distributed under the MIT license.
@@ -10597,7 +9414,7 @@ function clone(target) {
   }
 });
 
-},{}],7:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -10832,7 +9649,7 @@ function clone(target) {
 	return CryptoJS.AES;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":19}],8:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":17}],6:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -11723,7 +10540,7 @@ function clone(target) {
 
 
 }));
-},{"./core":9,"./evpkdf":12}],9:[function(require,module,exports){
+},{"./core":7,"./evpkdf":10}],7:[function(require,module,exports){
 (function (global){(function (){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
@@ -12523,7 +11340,7 @@ function clone(target) {
 
 }));
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"crypto":149}],10:[function(require,module,exports){
+},{"crypto":149}],8:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -12660,7 +11477,7 @@ function clone(target) {
 	return CryptoJS.enc.Base64;
 
 }));
-},{"./core":9}],11:[function(require,module,exports){
+},{"./core":7}],9:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -12810,7 +11627,7 @@ function clone(target) {
 	return CryptoJS.enc.Utf16;
 
 }));
-},{"./core":9}],12:[function(require,module,exports){
+},{"./core":7}],10:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -12945,7 +11762,7 @@ function clone(target) {
 	return CryptoJS.EvpKDF;
 
 }));
-},{"./core":9,"./hmac":16,"./sha1":35}],13:[function(require,module,exports){
+},{"./core":7,"./hmac":14,"./sha1":33}],11:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13012,7 +11829,7 @@ function clone(target) {
 	return CryptoJS.format.Hex;
 
 }));
-},{"./cipher-core":8,"./core":9}],14:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],12:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13031,7 +11848,7 @@ function clone(target) {
 	return CryptoJS.HmacSHA256;
 
 }));
-},{"./core":9,"./hmac":16,"./sha256":37}],15:[function(require,module,exports){
+},{"./core":7,"./hmac":14,"./sha256":35}],13:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13050,7 +11867,7 @@ function clone(target) {
 	return CryptoJS.HmacSHA512;
 
 }));
-},{"./core":9,"./hmac":16,"./sha512":41,"./x64-core":43}],16:[function(require,module,exports){
+},{"./core":7,"./hmac":14,"./sha512":39,"./x64-core":41}],14:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13194,7 +12011,7 @@ function clone(target) {
 
 
 }));
-},{"./core":9}],17:[function(require,module,exports){
+},{"./core":7}],15:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13214,7 +12031,7 @@ function clone(target) {
 
 }));
 
-},{"./aes":7,"./cipher-core":8,"./core":9,"./enc-base64":10,"./enc-utf16":11,"./evpkdf":12,"./format-hex":13,"./hmac":16,"./lib-typedarrays":18,"./md5":19,"./mode-cfb":20,"./mode-ctr":22,"./mode-ctr-gladman":21,"./mode-ecb":23,"./mode-ofb":24,"./pad-ansix923":25,"./pad-iso10126":26,"./pad-iso97971":27,"./pad-nopadding":28,"./pad-zeropadding":29,"./pbkdf2":30,"./rabbit":32,"./rabbit-legacy":31,"./rc4":33,"./ripemd160":34,"./sha1":35,"./sha224":36,"./sha256":37,"./sha3":38,"./sha384":39,"./sha512":41,"./sha512-256":40,"./tripledes":42,"./x64-core":43}],18:[function(require,module,exports){
+},{"./aes":5,"./cipher-core":6,"./core":7,"./enc-base64":8,"./enc-utf16":9,"./evpkdf":10,"./format-hex":11,"./hmac":14,"./lib-typedarrays":16,"./md5":17,"./mode-cfb":18,"./mode-ctr":20,"./mode-ctr-gladman":19,"./mode-ecb":21,"./mode-ofb":22,"./pad-ansix923":23,"./pad-iso10126":24,"./pad-iso97971":25,"./pad-nopadding":26,"./pad-zeropadding":27,"./pbkdf2":28,"./rabbit":30,"./rabbit-legacy":29,"./rc4":31,"./ripemd160":32,"./sha1":33,"./sha224":34,"./sha256":35,"./sha3":36,"./sha384":37,"./sha512":39,"./sha512-256":38,"./tripledes":40,"./x64-core":41}],16:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13291,7 +12108,7 @@ function clone(target) {
 	return CryptoJS.lib.WordArray;
 
 }));
-},{"./core":9}],19:[function(require,module,exports){
+},{"./core":7}],17:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13560,7 +12377,7 @@ function clone(target) {
 	return CryptoJS.MD5;
 
 }));
-},{"./core":9}],20:[function(require,module,exports){
+},{"./core":7}],18:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13641,7 +12458,7 @@ function clone(target) {
 	return CryptoJS.mode.CFB;
 
 }));
-},{"./cipher-core":8,"./core":9}],21:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],19:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13758,7 +12575,7 @@ function clone(target) {
 	return CryptoJS.mode.CTRGladman;
 
 }));
-},{"./cipher-core":8,"./core":9}],22:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],20:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13817,7 +12634,7 @@ function clone(target) {
 	return CryptoJS.mode.CTR;
 
 }));
-},{"./cipher-core":8,"./core":9}],23:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],21:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13858,7 +12675,7 @@ function clone(target) {
 	return CryptoJS.mode.ECB;
 
 }));
-},{"./cipher-core":8,"./core":9}],24:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],22:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13913,7 +12730,7 @@ function clone(target) {
 	return CryptoJS.mode.OFB;
 
 }));
-},{"./cipher-core":8,"./core":9}],25:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],23:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -13963,7 +12780,7 @@ function clone(target) {
 	return CryptoJS.pad.Ansix923;
 
 }));
-},{"./cipher-core":8,"./core":9}],26:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],24:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14008,7 +12825,7 @@ function clone(target) {
 	return CryptoJS.pad.Iso10126;
 
 }));
-},{"./cipher-core":8,"./core":9}],27:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],25:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14049,7 +12866,7 @@ function clone(target) {
 	return CryptoJS.pad.Iso97971;
 
 }));
-},{"./cipher-core":8,"./core":9}],28:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],26:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14080,7 +12897,7 @@ function clone(target) {
 	return CryptoJS.pad.NoPadding;
 
 }));
-},{"./cipher-core":8,"./core":9}],29:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],27:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14128,7 +12945,7 @@ function clone(target) {
 	return CryptoJS.pad.ZeroPadding;
 
 }));
-},{"./cipher-core":8,"./core":9}],30:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7}],28:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14274,7 +13091,7 @@ function clone(target) {
 	return CryptoJS.PBKDF2;
 
 }));
-},{"./core":9,"./hmac":16,"./sha1":35}],31:[function(require,module,exports){
+},{"./core":7,"./hmac":14,"./sha1":33}],29:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14465,7 +13282,7 @@ function clone(target) {
 	return CryptoJS.RabbitLegacy;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":19}],32:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":17}],30:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14658,7 +13475,7 @@ function clone(target) {
 	return CryptoJS.Rabbit;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":19}],33:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":17}],31:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -14798,7 +13615,7 @@ function clone(target) {
 	return CryptoJS.RC4;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":19}],34:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":17}],32:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15066,7 +13883,7 @@ function clone(target) {
 	return CryptoJS.RIPEMD160;
 
 }));
-},{"./core":9}],35:[function(require,module,exports){
+},{"./core":7}],33:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15217,7 +14034,7 @@ function clone(target) {
 	return CryptoJS.SHA1;
 
 }));
-},{"./core":9}],36:[function(require,module,exports){
+},{"./core":7}],34:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15298,7 +14115,7 @@ function clone(target) {
 	return CryptoJS.SHA224;
 
 }));
-},{"./core":9,"./sha256":37}],37:[function(require,module,exports){
+},{"./core":7,"./sha256":35}],35:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15498,7 +14315,7 @@ function clone(target) {
 	return CryptoJS.SHA256;
 
 }));
-},{"./core":9}],38:[function(require,module,exports){
+},{"./core":7}],36:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15825,7 +14642,7 @@ function clone(target) {
 	return CryptoJS.SHA3;
 
 }));
-},{"./core":9,"./x64-core":43}],39:[function(require,module,exports){
+},{"./core":7,"./x64-core":41}],37:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15909,7 +14726,7 @@ function clone(target) {
 	return CryptoJS.SHA384;
 
 }));
-},{"./core":9,"./sha512":41,"./x64-core":43}],40:[function(require,module,exports){
+},{"./core":7,"./sha512":39,"./x64-core":41}],38:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -15995,7 +14812,7 @@ function clone(target) {
 
 }));
 
-},{"./core":9,"./sha512":41,"./x64-core":43}],41:[function(require,module,exports){
+},{"./core":7,"./sha512":39,"./x64-core":41}],39:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -16322,7 +15139,7 @@ function clone(target) {
 	return CryptoJS.SHA512;
 
 }));
-},{"./core":9,"./x64-core":43}],42:[function(require,module,exports){
+},{"./core":7,"./x64-core":41}],40:[function(require,module,exports){
 ;(function (root, factory, undef) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -17102,7 +15919,7 @@ function clone(target) {
 	return CryptoJS.TripleDES;
 
 }));
-},{"./cipher-core":8,"./core":9,"./enc-base64":10,"./evpkdf":12,"./md5":19}],43:[function(require,module,exports){
+},{"./cipher-core":6,"./core":7,"./enc-base64":8,"./evpkdf":10,"./md5":17}],41:[function(require,module,exports){
 ;(function (root, factory) {
 	if (typeof exports === "object") {
 		// CommonJS
@@ -17407,7 +16224,7 @@ function clone(target) {
 	return CryptoJS;
 
 }));
-},{"./core":9}],44:[function(require,module,exports){
+},{"./core":7}],42:[function(require,module,exports){
 'use strict';
 
 var elliptic = exports;
@@ -17422,7 +16239,7 @@ elliptic.curves = require('./elliptic/curves');
 elliptic.ec = require('./elliptic/ec');
 elliptic.eddsa = require('./elliptic/eddsa');
 
-},{"../package.json":59,"./elliptic/curve":47,"./elliptic/curves":50,"./elliptic/ec":51,"./elliptic/eddsa":54,"./elliptic/utils":58,"brorand":5}],45:[function(require,module,exports){
+},{"../package.json":57,"./elliptic/curve":45,"./elliptic/curves":48,"./elliptic/ec":49,"./elliptic/eddsa":52,"./elliptic/utils":56,"brorand":3}],43:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -17805,7 +16622,7 @@ BasePoint.prototype.dblp = function dblp(k) {
   return r;
 };
 
-},{"../utils":58,"bn.js":4}],46:[function(require,module,exports){
+},{"../utils":56,"bn.js":2}],44:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -18242,7 +17059,7 @@ Point.prototype.eqXToP = function eqXToP(x) {
 Point.prototype.toP = Point.prototype.normalize;
 Point.prototype.mixedAdd = Point.prototype.add;
 
-},{"../utils":58,"./base":45,"bn.js":4,"inherits":73}],47:[function(require,module,exports){
+},{"../utils":56,"./base":43,"bn.js":2,"inherits":71}],45:[function(require,module,exports){
 'use strict';
 
 var curve = exports;
@@ -18252,7 +17069,7 @@ curve.short = require('./short');
 curve.mont = require('./mont');
 curve.edwards = require('./edwards');
 
-},{"./base":45,"./edwards":46,"./mont":48,"./short":49}],48:[function(require,module,exports){
+},{"./base":43,"./edwards":44,"./mont":46,"./short":47}],46:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -18432,7 +17249,7 @@ Point.prototype.getX = function getX() {
   return this.x.fromRed();
 };
 
-},{"../utils":58,"./base":45,"bn.js":4,"inherits":73}],49:[function(require,module,exports){
+},{"../utils":56,"./base":43,"bn.js":2,"inherits":71}],47:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -19372,7 +18189,7 @@ JPoint.prototype.isInfinity = function isInfinity() {
   return this.z.cmpn(0) === 0;
 };
 
-},{"../utils":58,"./base":45,"bn.js":4,"inherits":73}],50:[function(require,module,exports){
+},{"../utils":56,"./base":43,"bn.js":2,"inherits":71}],48:[function(require,module,exports){
 'use strict';
 
 var curves = exports;
@@ -19580,7 +18397,7 @@ defineCurve('secp256k1', {
   ],
 });
 
-},{"./curve":47,"./precomputed/secp256k1":57,"./utils":58,"hash.js":60}],51:[function(require,module,exports){
+},{"./curve":45,"./precomputed/secp256k1":55,"./utils":56,"hash.js":58}],49:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -19825,7 +18642,7 @@ EC.prototype.getKeyRecoveryParam = function(e, signature, Q, enc) {
   throw new Error('Unable to find valid recovery factor');
 };
 
-},{"../curves":50,"../utils":58,"./key":52,"./signature":53,"bn.js":4,"brorand":5,"hmac-drbg":72}],52:[function(require,module,exports){
+},{"../curves":48,"../utils":56,"./key":50,"./signature":51,"bn.js":2,"brorand":3,"hmac-drbg":70}],50:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -19948,7 +18765,7 @@ KeyPair.prototype.inspect = function inspect() {
          ' pub: ' + (this.pub && this.pub.inspect()) + ' >';
 };
 
-},{"../utils":58,"bn.js":4}],53:[function(require,module,exports){
+},{"../utils":56,"bn.js":2}],51:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -20116,7 +18933,7 @@ Signature.prototype.toDER = function toDER(enc) {
   return utils.encode(res, enc);
 };
 
-},{"../utils":58,"bn.js":4}],54:[function(require,module,exports){
+},{"../utils":56,"bn.js":2}],52:[function(require,module,exports){
 'use strict';
 
 var hash = require('hash.js');
@@ -20236,7 +19053,7 @@ EDDSA.prototype.isPoint = function isPoint(val) {
   return val instanceof this.pointClass;
 };
 
-},{"../curves":50,"../utils":58,"./key":55,"./signature":56,"hash.js":60}],55:[function(require,module,exports){
+},{"../curves":48,"../utils":56,"./key":53,"./signature":54,"hash.js":58}],53:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -20333,7 +19150,7 @@ KeyPair.prototype.getPublic = function getPublic(enc) {
 
 module.exports = KeyPair;
 
-},{"../utils":58}],56:[function(require,module,exports){
+},{"../utils":56}],54:[function(require,module,exports){
 'use strict';
 
 var BN = require('bn.js');
@@ -20400,7 +19217,7 @@ Signature.prototype.toHex = function toHex() {
 
 module.exports = Signature;
 
-},{"../utils":58,"bn.js":4}],57:[function(require,module,exports){
+},{"../utils":56,"bn.js":2}],55:[function(require,module,exports){
 module.exports = {
   doubles: {
     step: 4,
@@ -21182,7 +19999,7 @@ module.exports = {
   },
 };
 
-},{}],58:[function(require,module,exports){
+},{}],56:[function(require,module,exports){
 'use strict';
 
 var utils = exports;
@@ -21303,7 +20120,7 @@ function intFromLE(bytes) {
 utils.intFromLE = intFromLE;
 
 
-},{"bn.js":4,"minimalistic-assert":74,"minimalistic-crypto-utils":75}],59:[function(require,module,exports){
+},{"bn.js":2,"minimalistic-assert":72,"minimalistic-crypto-utils":73}],57:[function(require,module,exports){
 module.exports={
   "name": "elliptic",
   "version": "6.5.4",
@@ -21361,7 +20178,7 @@ module.exports={
   }
 }
 
-},{}],60:[function(require,module,exports){
+},{}],58:[function(require,module,exports){
 var hash = exports;
 
 hash.utils = require('./hash/utils');
@@ -21378,7 +20195,7 @@ hash.sha384 = hash.sha.sha384;
 hash.sha512 = hash.sha.sha512;
 hash.ripemd160 = hash.ripemd.ripemd160;
 
-},{"./hash/common":61,"./hash/hmac":62,"./hash/ripemd":63,"./hash/sha":64,"./hash/utils":71}],61:[function(require,module,exports){
+},{"./hash/common":59,"./hash/hmac":60,"./hash/ripemd":61,"./hash/sha":62,"./hash/utils":69}],59:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -21472,7 +20289,7 @@ BlockHash.prototype._pad = function pad() {
   return res;
 };
 
-},{"./utils":71,"minimalistic-assert":74}],62:[function(require,module,exports){
+},{"./utils":69,"minimalistic-assert":72}],60:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -21521,7 +20338,7 @@ Hmac.prototype.digest = function digest(enc) {
   return this.outer.digest(enc);
 };
 
-},{"./utils":71,"minimalistic-assert":74}],63:[function(require,module,exports){
+},{"./utils":69,"minimalistic-assert":72}],61:[function(require,module,exports){
 'use strict';
 
 var utils = require('./utils');
@@ -21669,7 +20486,7 @@ var sh = [
   8, 5, 12, 9, 12, 5, 14, 6, 8, 13, 6, 5, 15, 13, 11, 11
 ];
 
-},{"./common":61,"./utils":71}],64:[function(require,module,exports){
+},{"./common":59,"./utils":69}],62:[function(require,module,exports){
 'use strict';
 
 exports.sha1 = require('./sha/1');
@@ -21678,7 +20495,7 @@ exports.sha256 = require('./sha/256');
 exports.sha384 = require('./sha/384');
 exports.sha512 = require('./sha/512');
 
-},{"./sha/1":65,"./sha/224":66,"./sha/256":67,"./sha/384":68,"./sha/512":69}],65:[function(require,module,exports){
+},{"./sha/1":63,"./sha/224":64,"./sha/256":65,"./sha/384":66,"./sha/512":67}],63:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -21754,7 +20571,7 @@ SHA1.prototype._digest = function digest(enc) {
     return utils.split32(this.h, 'big');
 };
 
-},{"../common":61,"../utils":71,"./common":70}],66:[function(require,module,exports){
+},{"../common":59,"../utils":69,"./common":68}],64:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -21786,7 +20603,7 @@ SHA224.prototype._digest = function digest(enc) {
 };
 
 
-},{"../utils":71,"./256":67}],67:[function(require,module,exports){
+},{"../utils":69,"./256":65}],65:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -21893,7 +20710,7 @@ SHA256.prototype._digest = function digest(enc) {
     return utils.split32(this.h, 'big');
 };
 
-},{"../common":61,"../utils":71,"./common":70,"minimalistic-assert":74}],68:[function(require,module,exports){
+},{"../common":59,"../utils":69,"./common":68,"minimalistic-assert":72}],66:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -21930,7 +20747,7 @@ SHA384.prototype._digest = function digest(enc) {
     return utils.split32(this.h.slice(0, 12), 'big');
 };
 
-},{"../utils":71,"./512":69}],69:[function(require,module,exports){
+},{"../utils":69,"./512":67}],67:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -22262,7 +21079,7 @@ function g1_512_lo(xh, xl) {
   return r;
 }
 
-},{"../common":61,"../utils":71,"minimalistic-assert":74}],70:[function(require,module,exports){
+},{"../common":59,"../utils":69,"minimalistic-assert":72}],68:[function(require,module,exports){
 'use strict';
 
 var utils = require('../utils');
@@ -22313,7 +21130,7 @@ function g1_256(x) {
 }
 exports.g1_256 = g1_256;
 
-},{"../utils":71}],71:[function(require,module,exports){
+},{"../utils":69}],69:[function(require,module,exports){
 'use strict';
 
 var assert = require('minimalistic-assert');
@@ -22593,7 +21410,7 @@ function shr64_lo(ah, al, num) {
 }
 exports.shr64_lo = shr64_lo;
 
-},{"inherits":73,"minimalistic-assert":74}],72:[function(require,module,exports){
+},{"inherits":71,"minimalistic-assert":72}],70:[function(require,module,exports){
 'use strict';
 
 var hash = require('hash.js');
@@ -22708,7 +21525,7 @@ HmacDRBG.prototype.generate = function generate(len, enc, add, addEnc) {
   return utils.encode(res, enc);
 };
 
-},{"hash.js":60,"minimalistic-assert":74,"minimalistic-crypto-utils":75}],73:[function(require,module,exports){
+},{"hash.js":58,"minimalistic-assert":72,"minimalistic-crypto-utils":73}],71:[function(require,module,exports){
 if (typeof Object.create === 'function') {
   // implementation from standard node.js 'util' module
   module.exports = function inherits(ctor, superCtor) {
@@ -22737,7 +21554,7 @@ if (typeof Object.create === 'function') {
   }
 }
 
-},{}],74:[function(require,module,exports){
+},{}],72:[function(require,module,exports){
 module.exports = assert;
 
 function assert(val, msg) {
@@ -22750,7 +21567,7 @@ assert.equal = function assertEqual(l, r, msg) {
     throw new Error(msg || ('Assertion failed: ' + l + ' != ' + r));
 };
 
-},{}],75:[function(require,module,exports){
+},{}],73:[function(require,module,exports){
 'use strict';
 
 var utils = exports;
@@ -22810,11 +21627,11 @@ utils.encode = function encode(arr, enc) {
     return arr;
 };
 
-},{}],76:[function(require,module,exports){
+},{}],74:[function(require,module,exports){
 'use strict';
 
 module.exports = require("./lib");
-},{"./lib":77}],77:[function(require,module,exports){
+},{"./lib":75}],75:[function(require,module,exports){
 'use strict';
 
 var Promise = require("bluebird");
@@ -22961,10 +21778,1241 @@ module.exports = function secureRandomNumber(minimum, maximum, cb) {
 };
 
 module.exports.RandomGenerationError = RandomGenerationError;
-},{"bluebird":3,"create-error":6,"crypto":149}],78:[function(require,module,exports){
+},{"bluebird":1,"create-error":4,"crypto":149}],76:[function(require,module,exports){
+const bip39words = require('./bip39-en').words
+const utils = require('./utils')
+const hmacSHA512 = require('crypto-js/hmac-sha512')
+const hmacSHA256 = require('crypto-js/hmac-sha256')
+const PBKDF2 = require('crypto-js/pbkdf2')
+const cp = require('crypto-js');
+const EC = require('elliptic').ec;
+const EdDSA = require('elliptic').eddsa;
+const ecEd25519 = new EdDSA('ed25519');
+const ecSECP256 = new EC('secp256k1');
+const ecCurve25519 = new EC('ed25519');
+
+const BIP32KEY_HARDEN = 0x80000000
+const ed25519_n = 2n**252n + 27742317777372353535851937790883648493n
+const _ = undefined
+
+const hexilify   = cp.enc.Hex.stringify
+const unhexilify = cp.enc.Hex.parse
+
+const _hmac512  = (message, secret) => hmacSHA512(message, secret)
+const _hmac256  = (message, secret) => hmacSHA256(message, secret)
+const _getBit   = (character, pattern) => (character &  pattern) >>> 0
+const _setBit   = (character, pattern) => (character |  pattern) >>> 0
+const _clearBit = (character, pattern) => (character & ~pattern) >>> 0
+
+// In JS, to do bitwise operations with unsigned ints, follow these rules:
+// 1. Always end bitwise operations with >>> 0 so the result gets interpreted
+//    as unsigned.
+// 2. Don't use >>. If the left-most bit is 1 it will try to preseve the sign and 
+//    thus will introduce 1's to the left. Always use >>>.
+// 3. Only if the last op is >>>, >>> 0 is not necessary.
+// Source: https://stackoverflow.com/questions/6798111/bitwise-operations-on-32-bit-unsigned-ints
+const _OR  = (x,y) => (x | y) >>> 0
+const _AND = (x,y) => (x & y) >>> 0
+const _XOR = (x,y) => (x ^ y) >>> 0
+
+// Source: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
+const RED     = s => `\x1b[40m\x1b[31m${s}\x1b[0m`  //black background, red text
+const YELLOW  = s => `\x1b[40m\x1b[93m${s}\x1b[0m`  //black background, yellow text
+const GREEN   = s => `\x1b[40m\x1b[92m${s}\x1b[0m`  //black background, green text
+const GREENBG = s => `\x1b[102m\x1b[30m${s}\x1b[0m` //green background, black text
+
+const _DBUG = false
+const TRACE = (k,v, debug=_DBUG) => {
+    if(debug) console.log(k.padEnd(12),v)
+}
+const ENTER = (g   , debug=_DBUG) => { if(debug) console.group(YELLOW('ENTER ' + g)) }
+const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.log(YELLOW('LEAVE ' + g))} }
+
+/** @namespace BipToAlgo */
+
+/**
+ * @typedef  {Object}   BipToAlgo.WordArray
+ * @memberof BipToAlgo
+ * @property {number[]} words Bytes array as signed integers
+ * @property {number}   sigBytes
+ */
+ 
+ /**
+ * Stores order of elliptic curve and 
+ * {@link https://github.com/satoshilabs/slips/blob/master/slip-0010.md|SLIP10}
+ * modifier for master key generation.
+ * @typedef  {Object} BipToAlgo.CurveParams
+ * @memberof BipToAlgo
+ * @property {string} name      Name of elliptic curve
+ * @property {string} modifier  Key to use in HMAC-SHA512 as per SLIP10
+ * @property {BigInt} order     Order of the elliptic curve
+ */
+
+/** 
+ * @typedef  {Object}   BipToAlgo.AlgoData
+ * @memberof BipToAlgo
+ * @property {Object}   algo
+ * @property {string}   algo.key        Algorand private key in hexadecimal
+ * @property {address}  algo.address    Algorand public wallet address
+ * @property {string[]} algo.words      Algorand mnemonic (25 words)
+ * @property {string}   algo.pub        Algorand public key in hexadecimal
+ * @property {string=}  algo.chk1       Public key cheksum
+ * @property {string=}  algo.chk2       Mnemonic cheksum
+ */
+
+/**
+ * @typedef  {Object}              BipToAlgo.DerivationNode
+ * @memberof BipToAlgo
+ * @property {(string|BipToAlgo.WordArray)}  kL    Leftmost 32 bytes of private key
+ * @property {(string|BipToAlgo.WordArray)}  kR    Rightmost 32 bytes of private Key
+ * @property {(string|BipToAlgo.WordArray)=} A     32 bytes public key (y coordinatte only)
+ * @property {(string|BipToAlgo.WordArray)=} c     32 bytes chain code
+ * @property {(string|BipToAlgo.WordArray)=} P     32 bytes public key
+ * @property {BipToAlgo.AlgoData=}           algo
+ */
+
+/**
+ * Algorand secret mnemonic (25 BIP39 words)
+ * @typedef {string[]} BipToAlgo.AlgoSecretWords
+ * @memberof BipToAlgo
+ */
+
+/**
+ * @typedef  {Object}           BipToAlgo.AlgoAddressData
+ * @memberof BipToAlgo
+ * @property {string}           key
+ * @property {string}           pub
+ * @property {string}           address
+ * @property {string=}          chk
+ * @property {BipToAlgo.AlgoSecretWords=} words       Algorand secret words
+ */
+
+ /**
+ * @typedef  {Object}           BipToAlgo.AlgoMnemonicData
+ * @memberof BipToAlgo
+ * @property {BipToAlgo.AlgoSecretWords}  words       Algorand secret words  
+ * @property {string}           chk         Mnemonic checksum
+ */
+
+ /**
+ * @typedef  {Object}           BipToAlgo.AlgoParsedMnemonicData
+ * @memberof BipToAlgo
+ * @property {string}           mnemonic    Parsed Algorand mnemonic
+ * @property {string}           original    Original mnemonic normalized (NFKD)
+ * @property {BipToAlgo.AlgoSecretWords}  words       Algorand secret words
+ * @property {string}           key         Private key in hexadecimal
+ * @property {string}           checksum    Mnemonic checksum
+ * @property {boolean}          valid       Mnemonic validity
+ */
+
+  /**
+ * @typedef  {Object}    BipToAlgo.Bip39ParsedMnemonicData
+ * @memberof BipToAlgo
+ * @property {string}    mnemonic    Parsed Algorand mnemonic
+ * @property {string}    original    Original mnemonic normalized (NFKD)
+ * @property {string[]}  words       Algorand secret words
+ * @property {string}    checkbits   Checksum bits
+ * @property {boolean}   valid       Mnemonic validity
+ */
+
+/**
+ * Returns {@link BipToAlgo.DerivationNode} from arguments
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} kL   Leftmost 32 bytes of private key
+ * @param {(string|BipToAlgo.WordArray)} kR   Rightmost 32 bytes of private Key
+ * @param {{A: (string|BipToAlgo.WordArray), 
+ *  c: (string|BipToAlgo.WordArray), 
+ *  p: (string|BipToAlgo.WordArray)}} args
+ * @returns {BipToAlgo.DerivationNode} Derivation node
+ */
+const _NODE = (kL,kR, ...args) => { 
+    [ A, c, p ] = args
+    o = { kL, kR, A, c, p }
+    var dumps = () => kL.toString()
+    return o
+}
+/** Assertion utility function
+ * @returns {boolean}
+ */
+function _assert(x, y, op='eq'){
+    // console.log(x, op, y)
+    exp = false
+    exp ^= op === 'eq' & x === y
+    exp ^= op === 'gt' & x >   y
+    exp ^= op === 'ge' & x >=  y
+    exp ^= op === 'lt' & x <   y
+    exp ^= op === 'le' & x <=  y
+    if(exp) return true
+    else throw EvalError(RED(`\n${x}\nNOT ${op}\n${y}`))
+}
+/**
+ * Convert integers to BIP39 words
+ * @memberof BipToAlgo
+ * @param {number[]} nums 11-bit unsigned integers
+ * @returns {string[]} List of BIP39 words
+ */
+const numsToWords = nums => nums.reduce((p,c) => [...p, bip39words[c]],[])
+/**
+ * Convert {@link https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki#from-mnemonic-to-seed|BIP39} mnemonic to seed
+ * @memberof BipToAlgo
+ * @param {string} mnemonic    Mnemonic (12-24 words delimited by single space)
+ * @param {string} passphrase  Passphrase as suffix for the salt
+ * @param {string=} prefix     Modifier as prefix for the salt
+ * @returns {BipToAlgo.WordArray} Seed
+ */
+function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
+    return new Promise(function(resolve,reject){
+        seed = cp.PBKDF2(mnemonic.normalize('NFKD'), prefix+passphrase,{
+            hasher: cp.algo.SHA512,
+            keySize: 512 / 32,
+            iterations: 2048
+        })
+        if (seed.length === 0) reject('Error: empty seed')
+        TRACE('bip39seed',seed.toString())
+        resolve(seed)
+    })
+}
+/**
+ * Get elliptic curve parameters
+ * @memberof BipToAlgo
+ * @param {string} curveName Name of the elliptic curve
+ * @returns {BipToAlgo.CurveParams} Curve parameters
+ */
+function curveInfo(curveName){
+    curves = {
+    secp256k1: {
+                name:'secp256k1',
+                modifier: 'Bitcoin seed',
+                order: BigInt('0xfffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141')
+            },
+    nist256p1: {
+                name:'nist256p1',
+                modifier: 'Nist256p1 seed',
+                order: BigInt('0xffffffff00000000ffffffffffffffffbce6faada7179e84f3b9cac2fc632551')
+            },
+    ed25519: {
+                name:'ed25519',
+                modifier: 'ed25519 seed',
+            }
+    }
+    return curves[curveName]
+
+}
+/**
+ * Derive root key (master node) using SLIP10 specs or
+ * implementing paper from D. Khovratovich and J. Law
+ * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.WordArray}   seed Entropy to derive root key
+ * @param {BipToAlgo.CurveParams} curve Curve parameters
+ * @param {string}      [method='slip10'] Derivation method (slip10|kholaw)
+ * @returns {Promise<BipToAlgo.DerivationNode>} Promise with derivation node
+ */
+function rootKey(seed, curve, method='slip10'){
+    return new Promise((res,error)=>{
+        ENTER('ROOT KEY')
+        if(method==='slip10'){
+            isAlive = true
+            while(isAlive){
+                h = hmacSHA512(seed,curve.modifier).toString()
+                kL = unhexilify(h.substr(0,64))
+                kR = unhexilify(h.substr(64))
+                if(curve.name == 'ed25519') isAlive=false
+                a = BigInt('0x'+kL)
+                if(a<curve.order && a != 0) isAlive=false
+                seed = unhexilify(h)
+            TRACE('kL',kL.toString())
+            TRACE('kR',kR.toString())
+            LEAVE()
+            res(_NODE(kL,kR))
+            }
+        } else if(method==='kholaw'){
+            c = _hmac256(unhexilify('01'+seed),curve.modifier)
+            I = _hmac512(seed, curve.modifier).toString()
+            kL = unhexilify(I.substr(0,64))
+            kR = unhexilify(I.substr(64))
+            kLb = utils.hexToBytes(kL.toString())
+            while (_getBit(kLb[31], 0b00100000) !=0){
+                seed = unhexilify(I)
+                I = _hmac512(seed, curve.modifier).toString()
+                kL = unhexilify(I.substr(0,64))
+                kR = unhexilify(I.substr(64))
+                kLb = utils.hexToBytes(kL.toString())
+            }
+
+            kLb[0]  = _clearBit( kLb[0], 0b00000111)
+            kLb[31] = _clearBit(kLb[31], 0b10000000)
+            kLb[31] =   _setBit(kLb[31], 0b01000000)
+
+            kL = unhexilify(utils.bytesToHex(kLb))
+            kLr = utils.bytesToHex(kLb.reverse())
+
+            pub  = ecCurve25519.keyFromPrivate(kLr).getPublic()
+            x = pub.getX().toString('hex')
+            y = pub.getY().toString('hex')
+            A = encodeXY(x,y)
+
+            TRACE('scalar', BigInt('0x'+kLr).toString(10))
+            TRACE('x',x)
+            TRACE('y',y)
+
+            TRACE('kL',kL.toString())
+            TRACE('kR',kR.toString())
+            TRACE('A',A)
+            TRACE('c',c.toString())
+            LEAVE()
+
+            res(_NODE(kL,kR,A,c))
+        }
+    })
+}
+/**
+ * Computes public key for given curve
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} key Private key
+ * @param {BipToAlgo.CurveParams} curve Curve parameters
+ * @returns {string} Public key in hexadecimal
+ */
+function getPublicKey(key,curve){
+    if (curve.name == 'ed25519'){
+        k = '00' + utils.bytesToHex(ecEd25519.keyFromSecret(key.toString()).getPublic())
+    }
+    else if(curve.name == 'secp256k1'){
+        pub  = ecSECP256.keyFromPrivate(key.toString()).getPublic()
+        x    = pub.getX().toString('hex') // BN -> hex
+        y    = pub.getY().toString('hex') // BN -> hex
+        padx = x.padStart(64,'0')
+        pady = y.padStart(64,'0')
+        if (BigInt('0x' + y) & 1n) {
+            k = '03' + padx
+        } else{
+            k = '02' + padx
+        }
+}
+    return k
+}
+/**
+ * Derives child key from parent key data using SLIP10 specs
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} parentKey    Parent node private key
+ * @param {BipToAlgo.WordArray} parentChaincode       Parent node chain code
+ * @param {number} i                        Current path index
+ * @param {BipToAlgo.CurveParams} curve               Curve params
+ * @returns {Promise<BipToAlgo.DerivationNode>}       Child node
+ */
+function deriveChild(parentKey, parentChaincode, i, curve){
+    return new Promise((res,error)=>{
+        ENTER('DERIVE CHILD SLIP10')
+        data = ''
+        if(_AND(i, BIP32KEY_HARDEN)){
+            data = '00' + parentKey.toString()
+        } else {
+            data = getPublicKey(parentKey, curve)
+        }
+        data += i.toString(16).padStart(8,0) //padded 4 bytes
+
+        while(true){
+            h = hmacSHA512(unhexilify(data), parentChaincode).toString()
+            kL = unhexilify(h.substr(0,64))
+            kR = unhexilify(h.substr(64))
+            if(curve.name == 'ed25519') break
+            a = BigInt('0x'+kL)
+            key = (a + BigInt('0x' + parentKey)) % curve.order
+
+            if(a<curve.order &&  key!= 0){
+                kL = unhexilify(key.toString(16).padStart(64,0))
+                break
+            }
+            data = '01' + hexilify(kR) +  i.toString(16).padStart(8,0)
+        }
+
+        pub = getPublicKey(kL,curve)
+
+        o = _NODE(kL,kR,_,_,pub)
+
+        TRACE('private',o.kL.toString().padStart(64,0))
+        TRACE('chain',o.kR.toString().padStart(64,0))
+        TRACE('public',o.p)
+        LEAVE()
+        res(o)
+    })
+}
+/**
+ * Encodes elliptic curve X-coordinate into Y-coordinate
+ * @memberof BipToAlgo
+ * @param {string} x X-coordinate bytes in hexadecimal
+ * @param {string} y Y-coordinate bytes in hexadecimal
+ */
+function encodeXY(x,y){
+    xb = utils.hexToBytes(x)
+    yb = utils.hexToBytes(y)
+    if(_AND(xb[31],1)){
+        yb[0] = (yb[0] | 0x80) >>> 0
+    }
+    return utils.bytesToHex(yb.reverse())
+}
+/**
+ * Derive child key by implementing paper from D. Khovratovich and J. Law
+ * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.DerivationNode} node         Parent node
+ * @param {number} i                    Current path index
+ * @returns {Promise<BipToAlgo.DerivationNode>}   Child node
+ */
+function deriveChildKhoLaw(node, i){
+    ENTER('DERIVE CHILD KHO-LAW')
+    return new Promise((res,error)=>{
+        kLP = node.kL
+        kRP = node.kR
+        AP = node.A
+        cP = node.c
+
+        ib = utils.reverseHex(i.toString(16).padStart(4*2,'0'))
+        
+        // TRACE('\nDERIVE CHILD KEY:','')
+        TRACE('kLP',hexilify(kLP))
+        TRACE('kRP',hexilify(kRP))
+        TRACE('AP',AP)
+        TRACE('cP',hexilify(cP))
+        TRACE('i',i)
+        TRACE('ib',ib)
+
+        if(i < 2**31){
+            // regular child
+            Zi = '02' + AP + ib
+            ci = '03' + AP + ib
+            Z = _hmac512(unhexilify(Zi), cP).toString()
+            c = _hmac512(unhexilify(ci), cP).toString().substr(-32*2)
+            TRACE('Zi reg',Zi)
+            TRACE('ci reg',ci)
+        } else{
+            // hardened child
+            Zi = '00' + hexilify(kLP) + hexilify(kRP) + ib
+            ci = '01' + hexilify(kLP) + hexilify(kRP) + ib
+            Z = _hmac512(unhexilify(Zi), cP).toString().toString()
+            c = _hmac512(unhexilify(ci), cP).toString().substr(-32*2)
+            TRACE('Zi hard',Zi)
+            TRACE('ci hard',ci)
+        }
+        TRACE('Z',Z)
+        TRACE('c',c)
+
+        ZL = unhexilify(Z.substr(0,28*2))
+        ZR = unhexilify(Z.substr(32*2))
+
+        // compute KRi
+        kLn = BigInt('0x'+utils.reverseHex(hexilify(ZL))) * 8n 
+            + BigInt('0x'+utils.reverseHex(hexilify(kLP)))
+        
+        TRACE('ZL',ZL.toString())
+        TRACE('ZR',ZR.toString())
+        TRACE('kLn',kLn.toString(16))
+
+        if(kLn % ed25519_n == 0n){
+            TRACE('kLn is 0','kLn % ed25519')
+            res()
+        }
+
+        // compute KLi
+        kRn = (
+            BigInt('0x'+utils.reverseHex(hexilify(ZR)))
+          + BigInt('0x'+utils.reverseHex(hexilify(kRP)))
+             ) % 2n**256n
+
+        TRACE('kRn',kRn.toString(16))
+
+        kL = utils.reverseHex(kLn.toString(16))
+        kR = utils.reverseHex(kRn.toString(16))
+        TRACE('kL',kL.toString(16))
+        TRACE('kR',kR.toString(16))
+
+        pub  = ecCurve25519.keyFromPrivate(utils.reverseHex(kL)).getPublic()
+
+        x = pub.getX().toString('hex')
+        y = pub.getY().toString('hex')
+        A = encodeXY(x,y)
+
+        TRACE('scalar', BigInt('0x'+utils.reverseHex(kL)).toString(10))
+        TRACE('x',x)
+        TRACE('y',y)
+        TRACE('A',A)
+        LEAVE()
+
+        o =_NODE(unhexilify(kL),unhexilify(kR),A,unhexilify(c))
+        res(o)
+    })
+}
+
+ /**
+  * Computes Algorand address and mnemonic from {@link BipToAlgo.DerivationNode}
+  * @memberof BipToAlgo
+  * @param {BipToAlgo.DerivationNode} node
+  * @returns {Promise<BipToAlgo.DerivationNode>} Derivation node with Algorand's secret 
+  */
+function algoSecret(node){
+    ENTER('ALGORAND SECRET')
+    return new Promise((res,error)=>{
+        var { key, pub, address, chk } = algoAddress(node.kL)
+        chk1 = chk
+        var { words, chk } = algoMnemonic(key)
+        chk2 = chk
+        TRACE('key',key)
+        TRACE('pub',pub)
+        TRACE('pub_chk',chk1)
+        TRACE('addr',address)
+        TRACE('mnemo_chk',chk2)
+        TRACE('words',words)
+        LEAVE()
+        node.algo = { key,address,words,pub,chk1,chk2 }
+        res(node)
+    })
+}
+
+/**
+ * Derives Algorand's public key from private key
+ * @memberof BipToAlgo
+ * @param {(string|BipToAlgo.WordArray)} key
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ */
+function algoAddress(key){
+    key = key.toString().padStart(64,'0')
+    pub = utils.bytesToHex(ecEd25519.keyFromSecret(key).getPublic())
+    chk = hexilify(cp.SHA512t256(unhexilify(pub))).substr(0,64).substr(-8)
+    address = utils.hex2b32(pub+chk).replace(/=/g,'')
+    return { key, pub, address, chk }
+}
+/**
+ * Translates Algorand private key to mnemonic words
+ * @memberof BipToAlgo
+ * @param {string} key Private key in hexadecimal
+ * @returns {BipToAlgo.AlgoMnemonicData} Algorand's mnemonic data
+ */
+function algoMnemonic(key){
+    nums = utils.bytes2b11(utils.hexToBytes(key))
+    words = numsToWords(nums)
+    chk = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
+    chkN = utils.bytes2b11(utils.hexToBytes(chk))
+    chkW = numsToWords(chkN)[0]
+    words.push(chkW)
+    return { words, chk }
+}
+/**
+ * Generates random Algorand address
+ * @memberof BipToAlgo
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ */
+const randomAlgoAddress = () => utils.randomHex(32).then(ent => algoAddress(ent))
+
+/**
+ * Translates Algorand mnemonic to private key
+ * @memberof BipToAlgo
+ * @param {string} mnemonic 
+ * @returns {BipToAlgo.AlgoParsedMnemonicData} Algorand's parsed mnemonic data
+ */
+function algoKeyFromMnemonic(mnemonic){
+    mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
+    if(mnemonic.length !== 25) throw new Error('Invalid mnemonic length: expected 25 words')
+    words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
+    nums = words.map(w => bip39words.findIndex(bw => bw==w))
+    if(nums.length !== 25) throw new Error('Invalid mnemonic: one or more words not valid')
+    // last word is the checksum:
+    csN1 = nums.slice(-1)[0]
+    cs1 = csN1.toString(16)
+    // convert 11-bit numbers (little endian) to bits:
+    bits = nums.slice(0,24).map((e,i) => e.toString(2).padStart(11,'0')).reverse().join('')
+    key = utils.reverseHex(utils.bits2hex(bits)).substr(0,64)
+    // compute the checksum to verify mnemonic:
+    cs2 = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
+    csN2 = utils.bytes2b11(utils.hexToBytes(cs2))[0]
+    isValid = csN1 === csN2
+    parsed = { 
+        mnemonic:words.join(' '),
+        original: mnemonic.join(' '),
+        words:words,
+        key:key,
+        checksum:cs1, 
+        valid:isValid,
+    }
+    return parsed
+}
+/**
+ * Derives Algorand public key and address
+ * @memberof BipToAlgo
+ * @param {string} mnemonic Algorand mnemonic
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ */
+function algoAddressFromMnemonic(mnemonic){
+    var { key, words, valid } = algoKeyFromMnemonic(mnemonic)
+    if(!valid) throw new Error('Invalid mnemonic checksum')
+    var { pub, address } = algoAddress(key)
+    return { key, pub, address, words }
+}
+/**
+ * Generates N random addresses and counts occurrences of last character
+ * @memberof BipToAlgo
+ * @param {number} [n=1000] Number of addresses to generate
+ * @returns {void} Nothing
+ */
+function countAddressEnding(n=1000){
+    let b32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'.split('')
+    let b32map = Object.fromEntries(new Map(b32.map(e => [e,0])))
+    let endChars = utils.range(n).map((e,i,a) => randomAlgoAddress().then(algo => {
+        if((i+1)%1000==0) console.log(i, algo.address)
+        return algo.address.substr(-1)
+    }))
+    Promise.all(endChars).then(chars => {
+        for (let i = chars.length - 1; i >= 0; i--) {
+            let c = chars[i]
+            b32map[c]++
+        }
+        console.log(b32map)
+    })
+}
+/**
+ * Computes Algorand address and mnemonic from private key
+ * @memberof BipToAlgo
+ * @param {string} key Private key in hexadecimal
+ * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ */
+function algoWords(key){
+    return new Promise((res,error)=>{
+        var { pub, address } = algoAddress(key)
+        var { words } = algoMnemonic(key)
+        algo = { key, pub, address, words }
+        res(algo)
+    })
+}
+/**
+ * Derives Algorand's secret from BIP39 seed and using given method and path
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.WordArray}   seed    BIP39 seed bytes
+ * @param {string}      method  Derivation method
+ * @param {string=}     path    Derivation path
+ * @returns {Promise<BipToAlgo.DerivationNode>} Derivation node with Algorand's secret
+ */
+function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
+    TRACE('method',method)
+    TRACE('path',path)
+
+    if(method==='bip39-seed'){
+        let o = _NODE()
+        o.seed = seed
+        o.bip39seed = seed.toString()
+        o.kL = unhexilify(seed.toString().substr(0,32*2))
+        TRACE('kL',o.kL.toString().padStart(64,0))
+        return algoSecret(o)
+    }
+
+    curve = curveInfo(method.split('-')[1])
+    method = method.split('-')[0]
+
+    return rootKey(seed,curve,method)
+    .then(root => {
+        TRACE('m_private',root.kL.toString())
+        TRACE('m_chain',root.kR.toString())
+
+        path = path.split('/')
+        // path.shift(0)
+        if(path.indexOf('m') === 0) [ignore, ...path] = path
+
+        return path.reduce((p,c,i,a) => {
+            return p.then(o=>{
+                idx = parseInt(c)
+                if (c.substr(-1) === "'") idx = _OR(idx, BIP32KEY_HARDEN)
+                if (curve.name === 'ed25519' && method == 'slip10') idx = _OR(idx, BIP32KEY_HARDEN)
+                currPath = a.slice(0,i+1).join('/')
+                ENTER(currPath)
+                TRACE('parent key',o.kL.toString())
+                if(method=='slip10') return deriveChild(o.kL, o.kR, idx, curve).then(o=>{ LEAVE(''); return o })
+                if(method=='kholaw') return deriveChildKhoLaw(o, idx).then(o=>{ LEAVE(''); return o })
+            })
+        }, Promise.resolve(root))
+        .then(o=>{
+            o.seed = seed
+            o.bip39seed = seed.toString()
+            return o
+        })
+    })
+    .then(node => algoSecret(node))
+}
+/**
+ * Derives Algorand's secret from BIP39 mnemonic and using given method and path
+ * @memberof BipToAlgo
+ * @param   {string}    mnemonic    BIP39 mnemonic
+ * @param   {string}    method      Derivation method
+ * @param   {string=}   path        Derivation path
+ * @param   {string=}   passphrase  BIP39 mnemonic passphrase
+ * @returns {Promise<BipToAlgo.DerivationNode>} Derivation node with Algorand secret
+ * @example
+ * // Returns:
+ * // 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
+ * // NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
+ * //  1. sorry       6. laugh      11. setup      16. employ     21. favorite   
+ * //  2. aisle       7. tissue     12. kit        17. call       22. gaze       
+ * //  3. similar     8. upset      13. isolate    18. venture    23. maximum    
+ * //  4. royal       9. volcano    14. bonus      19. item       24. abandon    
+ * //  5. unveil     10. beach      15. poem       20. snack      25. leave
+ * mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
+ * deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
+ * .then(node => {
+ *     console.log(node.algo.key)
+ *     console.log(node.algo.address)
+ *     words = prettifyWordsTTB(node.algo.words)
+ *     console.log(words)
+ * })
+ */
+function deriveMnemonic(mnemonic, method, path, passphrase=''){
+    return bip39seed(mnemonic,passphrase).then(seed => deriveBip39Seed(seed, method, path))
+}
+/**
+ * Formats list of 25 words in a 5x5 grid, indexed Left-to-Right
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.AlgoSecretWords} words - Algorand secret words
+ * @returns {string} Formatted words list with line breaks
+ */
+function prettifyWordsLTR(words){
+    prettyWords = []
+    row = []
+    words.map((w,i)=>{
+            w = ((i+1).toString().padStart(2) + '. ' + w).padEnd(15)
+            row.push(w)
+            if((i+1)%5==0) {
+                prettyWords.push(row.join(''))
+                row = []
+            }
+        })
+    return prettyWords.join('\n')
+}
+/**
+ * Formats list of 25 words in a 5x5 grid, indexed Top-to-Bottom
+ * @memberof BipToAlgo
+ * @param {BipToAlgo.AlgoSecretWords} words - Algorand secret words
+ * @returns {string} Formatted words list with line breaks
+ */
+function prettifyWordsTTB(words){
+    prettyWords = words.map((w,i)=>{
+        w = ((i+1).toString().padStart(2) + '. ' + w).padEnd(15)
+        if(i>=20) w += '\n'
+        return w
+    }).map((w,i,a)=>{
+        return a[5*(i%5) + Math.floor(i/5)]
+    })
+    return prettyWords.join('')
+}
+/**
+ * Computes BIP39 checksum bits for given entropy
+ * @memberof BipToAlgo
+ * @param {string} ent Entropy bytes in hexadecimal
+ * @param {number} cs  Checksum length in bits
+ * @returns {string} Checksum bits
+ */
+function entCheckBits(ent, cs){
+    chk = cp.SHA256(unhexilify(ent)).toString().substr(0,2) //get first byte
+    return utils.hex2bits(chk).substr(0,cs).padStart(cs)
+}
+/**
+ * Translates entropy into BIP39 mnemonic words
+ * @memberof BipToAlgo
+ * @param   {string}   ent 
+ * @returns {string[]} BI39 words list
+ */
+function ent2bip39words(ent){
+    cs = ent.length*8/2/32
+    entChecked = utils.hex2bits(ent).substr(0,ent.length*8/2+cs)+entCheckBits(ent,cs)
+    nums = utils.bits2uintN(11,entChecked)
+    wlist = numsToWords(nums)
+    return wlist
+}
+/**
+ * Generates random BIP39 words
+ * @memberof BipToAlgo
+ * @param {number} size Entropy size in bytes (16|20|24|28|32)
+ * @returns {string} Mnemonic words
+ */
+const randomWords = size => utils.randomHex(size).then(r => ent2bip39words(r)).then(w => w.join(' '))
+/**
+ * Find word in BIP39 wordlist
+ * @memberof BipToAlgo
+ * @param {string} word BIP39 word to search
+ * @returns {(string|undefined)} Found word
+ */
+function findBip39Word(word){
+    w = word.trim().toLowerCase().normalize('NFKD').substr(0,4)
+    return bip39words.find(bw => bw.substr(0,4)==w)
+}
+/**
+ * Parses BIP39 mnemonic and verifies validity
+ * @memberof BipToAlgo
+ * @param {string} mnemonic 
+ * @returns {BipToAlgo.Bip39ParsedMnemonicData}
+ */
+function parseMnemonic(mnemonic){
+    mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
+    words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
+    nums = words.map(w => bip39words.findIndex(bw => bw==w))
+    bits = utils.uintN2bits(11,nums)
+    cs = bits.length % 32
+    ent = utils.bits2hex(bits.substr(0,bits.length-cs))
+    chkBits1 = bits.substr(-cs)
+    chkBits2 = entCheckBits(ent, cs)
+    isValid = chkBits1 === chkBits2
+    parsed = { 
+        mnemonic:words.join(' '),
+        original: mnemonic.join(' '),
+        words:words, 
+        checkbits:chkBits1, 
+        valid:isValid,
+    }
+    return parsed
+}
+/**
+ * Generate dummy BIP39 mnemonic for testing
+ * @memberof BipToAlgo
+ * @param {string} [word='all'] Dummy BIP39 word to repeat 
+ * @param {number} [size=24]    Number of words (12|15|18|21|24)
+ * @example
+ * // returns "dog dog dog dog dog dog dog dog dog dog dog dose"
+ * console.log(testMnemonicWords('dog',12).join(' '))
+ * @example
+ * // returns "boy boy boy boy boy boy boy boy boy boy boy boy boy boy boss"
+ * console.log(testMnemonicWords('boy',15).join(' '))
+ * @example
+ * // returns "bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety"
+ * console.log(testMnemonicWords('bar',24).join(' '))
+ */
+function testMnemonicWords(word='all',size=24){
+    dummyMnemonic = `${word.trim()} `.repeat(size).trim()
+    mnemonic = dummyMnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
+    words = mnemonic.map(w => bip39words.find(bw => bw.substr(0,4)==w.substr(0,4)))
+    nums = words.map(w => bip39words.findIndex(bw => bw==w))
+    bits = utils.uintN2bits(11,nums)
+    cs = bits.length % 32
+    ent = utils.bits2hex(bits.substr(0,bits.length-cs))
+    // chkBits = entCheckBits(ent, cs)
+    return ent2bip39words(ent)
+}
+/**
+ * Derive mnemonic for given test vector
+ * @memberof BipToAlgo
+ * @param {{ no: number, mnemonic: string, 
+ *  method: string, path: string, key: string, 
+ *  address: string }} testVector
+ * @returns {void} Nothing
+ */
+function deriveMnemonicTest({ no, mnemonic, method, path, key, address }) {
+    ENTER(`Test #${no}: ${method}`, true)
+    return deriveMnemonic(mnemonic, method, path)
+    .then(o=>{
+        // console.log(o.algo)
+        TRACE('test key', key, true)
+        TRACE('test address', address, true)
+        let { valid } = parseMnemonic(mnemonic)
+        _assert(valid, true)
+        _assert(o.algo.key, key)
+        _assert(o.algo.address, address)
+        console.log(prettifyWordsLTR(o.algo.words))
+        TRACE(GREENBG('assertion'), GREENBG('OK'), true)
+        return true
+    })
+    .then(done => LEAVE('', true))
+}
+/**
+ * Run tests and log to console
+ * @memberof BipToAlgo
+ * @returns {void} Nothing
+ */
+function tests() {
+    vectors = [
+        { 
+            no:         1,
+            mnemonic:   'all all all all all all all all all all all all all all all all all all all all all all all feel',
+            method:     wallets.ledger.method,
+            path:       wallets.ledger.path,
+            key:        '1075ab5e3fcedcb69eef77974b314cc0cbc163c01a0c354989dc70b8789a194f',
+            address:    'NVGXFOROGBDBUW6CEQDX6V742PWFPLXUDKW6V7HOZHFD7GSQEB556GUZII'
+        },
+        { 
+            no:         2,
+            mnemonic:   'all all all all all all all all all all all all all all all all all all all all all all all feel',
+            method:     wallets.coinomi.method,
+            path:       wallets.coinomi.path,
+            key:        '7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11',
+            address:    'NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA'
+        },
+        { 
+            no:         3,
+            mnemonic:   'all all all all all all all all all all all all',
+            method:     wallets.exodus.method,
+            path:       wallets.exodus.path,
+            key:        '0c9b6a753e82afef190302853c14cdadc8d229cec3196ee464e41f0bc5c2519e',
+            address:    'ZXLNDDUAYCYFXJI33HXUXLNVUTMQMSG6HRXV6JT2KNSU2SP4J7GUZG5BWU'
+        },
+        { 
+            no:         4,
+            mnemonic:   'all all all all all all all all all all all all',
+            method:     wallets.atomic.method,
+            path:       wallets.atomic.path,
+            key:        'c76c4ac4f4e4a00d6b274d5c39c700bb4a7ddc04fbc6f78e85ca75007b5b495f',
+            address:    'YQDDGDM3BKPQ5RAIYGCT7JX6DCIMVQHTHITSPJWKNLIPETB2JR6MPKC43A'
+        },
+        { 
+            no:         5,
+            mnemonic:   'bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety',
+            method:     wallets.ledger.method,
+            path:       wallets.ledger.path,
+            key:        'c896059cbb23f5e29692ce23c5c56aeea6376ae63dfb513e03e42b75be51e646',
+            address:    'KS4ACRBVNAKFAEKK5XWV5HV355FDPBRNG37VTJYU646WLAGWD26L6FSIRA'
+        },
+        { 
+            no:         6,
+            mnemonic:   'bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar bar anxiety',
+            method:     wallets.trust.method,
+            path:       wallets.trust.path,
+            key:        '83fffaec238ae65b1ef4195d01d6c670348335f78ee6407e70c07cd356cd462e',
+            address:    'DDVQJSNA7KMZAR3WTZXQHB53KKXHI7AGQOQSPLQL4Y5PTY7IMNTATQMTAE'
+        },
+        { 
+            no:         7,
+            mnemonic:   'dog dog dog dog dog dog dog dog dog dog dog dose',
+            method:     wallets.exodus.method,
+            path:       wallets.exodus.path,
+            key:        '9bcbf75ea8b0997771c19e8440e3bce7675374bbe926f608cdbf671d42171966',
+            address:    'QKYJ7CY3ZDJZ7GZE7FJ6S5WK5MKKTNBJBS2L7B2LUKSHSMEJWFG4KIS3FI'
+        },
+        { 
+            no:         8,
+            mnemonic:   'dog dog dog dog dog dog dog dog dog dog dog dose',
+            method:     wallets.atomic.method,
+            path:       wallets.atomic.path,
+            key:        '0eed13381c206469210932dd7f58b0a84b9d44b1b63e9f963b0d4c4d1baead3f',
+            address:    'CWEAA3OJTGY2IJOACHISLWAJNR6XMFNRLCD7MXRPFUBESTMMKSQ42XRBOI'
+        },
+        
+
+    ]
+    vectors.reduce((p, v, arr) => {
+        return p.then(() => deriveMnemonicTest(v))
+    },Promise.resolve())
+    .catch(console.log)
+}
+
+const wallets = {
+        atomic  :{ method: 'bip39-seed'      ,path: undefined           },
+        coinomi :{ method: 'slip10-ed25519'  ,path: "m/44'/283'/0'/0/0" },
+        exodus  :{ method: 'slip10-secp256k1',path: "m/44'/283'/0'/0/0" },
+        ledger  :{ method: 'kholaw-ed25519'  ,path: "m/44'/283'/0'/0/0" },
+        trust   :{ method: 'slip10-ed25519'  ,path: "m/44'/283'/0'/0/0" },
+    }
+
+
+//-------------------------------------------------------
+//::EXAMPLE::
+//-------------------------------------------------------
+// mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
+// deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
+// .then(node => {
+//     console.log(node.algo.key)
+//     console.log(node.algo.address)
+//     words = prettifyWordsTTB(node.algo.words)
+//     console.log(words)
+// })
+
+//-------------------------------------------------------
+//::GENERATE DUMMY MNEMONICS FOR TESTING::
+//-------------------------------------------------------
+// console.log(testMnemonicWords('dog',12).join(' '))
+// console.log(testMnemonicWords('boy',15).join(' '))
+// console.log(testMnemonicWords('bar',24).join(' '))
+
+//-------------------------------------------------------
+//::RUN TEST VECTORS::
+//-------------------------------------------------------
+// tests()
+
+module.exports = {
+    algoWords,
+    algoAddressFromMnemonic,
+    bip39seed,
+    deriveBip39Seed,
+    deriveMnemonic,
+    findBip39Word,
+    parseMnemonic,
+    randomAlgoAddress,
+    randomWords,
+    wallets,
+}
+
+},{"./bip39-en":77,"./utils":78,"crypto-js":15,"crypto-js/hmac-sha256":12,"crypto-js/hmac-sha512":13,"crypto-js/pbkdf2":28,"elliptic":42}],77:[function(require,module,exports){
+exports.words = [
+'abandon','ability','able','about','above','absent','absorb','abstract',
+'absurd','abuse','access','accident','account','accuse','achieve','acid',
+'acoustic','acquire','across','act','action','actor','actress','actual',
+'adapt','add','addict','address','adjust','admit','adult','advance',
+'advice','aerobic','affair','afford','afraid','again','age','agent',
+'agree','ahead','aim','air','airport','aisle','alarm','album',
+'alcohol','alert','alien','all','alley','allow','almost','alone',
+'alpha','already','also','alter','always','amateur','amazing','among',
+'amount','amused','analyst','anchor','ancient','anger','angle','angry',
+'animal','ankle','announce','annual','another','answer','antenna','antique',
+'anxiety','any','apart','apology','appear','apple','approve','april',
+'arch','arctic','area','arena','argue','arm','armed','armor',
+'army','around','arrange','arrest','arrive','arrow','art','artefact',
+'artist','artwork','ask','aspect','assault','asset','assist','assume',
+'asthma','athlete','atom','attack','attend','attitude','attract','auction',
+'audit','august','aunt','author','auto','autumn','average','avocado',
+'avoid','awake','aware','away','awesome','awful','awkward','axis',
+'baby','bachelor','bacon','badge','bag','balance','balcony','ball',
+'bamboo','banana','banner','bar','barely','bargain','barrel','base',
+'basic','basket','battle','beach','bean','beauty','because','become',
+'beef','before','begin','behave','behind','believe','below','belt',
+'bench','benefit','best','betray','better','between','beyond','bicycle',
+'bid','bike','bind','biology','bird','birth','bitter','black',
+'blade','blame','blanket','blast','bleak','bless','blind','blood',
+'blossom','blouse','blue','blur','blush','board','boat','body',
+'boil','bomb','bone','bonus','book','boost','border','boring',
+'borrow','boss','bottom','bounce','box','boy','bracket','brain',
+'brand','brass','brave','bread','breeze','brick','bridge','brief',
+'bright','bring','brisk','broccoli','broken','bronze','broom','brother',
+'brown','brush','bubble','buddy','budget','buffalo','build','bulb',
+'bulk','bullet','bundle','bunker','burden','burger','burst','bus',
+'business','busy','butter','buyer','buzz','cabbage','cabin','cable',
+'cactus','cage','cake','call','calm','camera','camp','can',
+'canal','cancel','candy','cannon','canoe','canvas','canyon','capable',
+'capital','captain','car','carbon','card','cargo','carpet','carry',
+'cart','case','cash','casino','castle','casual','cat','catalog',
+'catch','category','cattle','caught','cause','caution','cave','ceiling',
+'celery','cement','census','century','cereal','certain','chair','chalk',
+'champion','change','chaos','chapter','charge','chase','chat','cheap',
+'check','cheese','chef','cherry','chest','chicken','chief','child',
+'chimney','choice','choose','chronic','chuckle','chunk','churn','cigar',
+'cinnamon','circle','citizen','city','civil','claim','clap','clarify',
+'claw','clay','clean','clerk','clever','click','client','cliff',
+'climb','clinic','clip','clock','clog','close','cloth','cloud',
+'clown','club','clump','cluster','clutch','coach','coast','coconut',
+'code','coffee','coil','coin','collect','color','column','combine',
+'come','comfort','comic','common','company','concert','conduct','confirm',
+'congress','connect','consider','control','convince','cook','cool','copper',
+'copy','coral','core','corn','correct','cost','cotton','couch',
+'country','couple','course','cousin','cover','coyote','crack','cradle',
+'craft','cram','crane','crash','crater','crawl','crazy','cream',
+'credit','creek','crew','cricket','crime','crisp','critic','crop',
+'cross','crouch','crowd','crucial','cruel','cruise','crumble','crunch',
+'crush','cry','crystal','cube','culture','cup','cupboard','curious',
+'current','curtain','curve','cushion','custom','cute','cycle','dad',
+'damage','damp','dance','danger','daring','dash','daughter','dawn',
+'day','deal','debate','debris','decade','december','decide','decline',
+'decorate','decrease','deer','defense','define','defy','degree','delay',
+'deliver','demand','demise','denial','dentist','deny','depart','depend',
+'deposit','depth','deputy','derive','describe','desert','design','desk',
+'despair','destroy','detail','detect','develop','device','devote','diagram',
+'dial','diamond','diary','dice','diesel','diet','differ','digital',
+'dignity','dilemma','dinner','dinosaur','direct','dirt','disagree','discover',
+'disease','dish','dismiss','disorder','display','distance','divert','divide',
+'divorce','dizzy','doctor','document','dog','doll','dolphin','domain',
+'donate','donkey','donor','door','dose','double','dove','draft',
+'dragon','drama','drastic','draw','dream','dress','drift','drill',
+'drink','drip','drive','drop','drum','dry','duck','dumb',
+'dune','during','dust','dutch','duty','dwarf','dynamic','eager',
+'eagle','early','earn','earth','easily','east','easy','echo',
+'ecology','economy','edge','edit','educate','effort','egg','eight',
+'either','elbow','elder','electric','elegant','element','elephant','elevator',
+'elite','else','embark','embody','embrace','emerge','emotion','employ',
+'empower','empty','enable','enact','end','endless','endorse','enemy',
+'energy','enforce','engage','engine','enhance','enjoy','enlist','enough',
+'enrich','enroll','ensure','enter','entire','entry','envelope','episode',
+'equal','equip','era','erase','erode','erosion','error','erupt',
+'escape','essay','essence','estate','eternal','ethics','evidence','evil',
+'evoke','evolve','exact','example','excess','exchange','excite','exclude',
+'excuse','execute','exercise','exhaust','exhibit','exile','exist','exit',
+'exotic','expand','expect','expire','explain','expose','express','extend',
+'extra','eye','eyebrow','fabric','face','faculty','fade','faint',
+'faith','fall','false','fame','family','famous','fan','fancy',
+'fantasy','farm','fashion','fat','fatal','father','fatigue','fault',
+'favorite','feature','february','federal','fee','feed','feel','female',
+'fence','festival','fetch','fever','few','fiber','fiction','field',
+'figure','file','film','filter','final','find','fine','finger',
+'finish','fire','firm','first','fiscal','fish','fit','fitness',
+'fix','flag','flame','flash','flat','flavor','flee','flight',
+'flip','float','flock','floor','flower','fluid','flush','fly',
+'foam','focus','fog','foil','fold','follow','food','foot',
+'force','forest','forget','fork','fortune','forum','forward','fossil',
+'foster','found','fox','fragile','frame','frequent','fresh','friend',
+'fringe','frog','front','frost','frown','frozen','fruit','fuel',
+'fun','funny','furnace','fury','future','gadget','gain','galaxy',
+'gallery','game','gap','garage','garbage','garden','garlic','garment',
+'gas','gasp','gate','gather','gauge','gaze','general','genius',
+'genre','gentle','genuine','gesture','ghost','giant','gift','giggle',
+'ginger','giraffe','girl','give','glad','glance','glare','glass',
+'glide','glimpse','globe','gloom','glory','glove','glow','glue',
+'goat','goddess','gold','good','goose','gorilla','gospel','gossip',
+'govern','gown','grab','grace','grain','grant','grape','grass',
+'gravity','great','green','grid','grief','grit','grocery','group',
+'grow','grunt','guard','guess','guide','guilt','guitar','gun',
+'gym','habit','hair','half','hammer','hamster','hand','happy',
+'harbor','hard','harsh','harvest','hat','have','hawk','hazard',
+'head','health','heart','heavy','hedgehog','height','hello','helmet',
+'help','hen','hero','hidden','high','hill','hint','hip',
+'hire','history','hobby','hockey','hold','hole','holiday','hollow',
+'home','honey','hood','hope','horn','horror','horse','hospital',
+'host','hotel','hour','hover','hub','huge','human','humble',
+'humor','hundred','hungry','hunt','hurdle','hurry','hurt','husband',
+'hybrid','ice','icon','idea','identify','idle','ignore','ill',
+'illegal','illness','image','imitate','immense','immune','impact','impose',
+'improve','impulse','inch','include','income','increase','index','indicate',
+'indoor','industry','infant','inflict','inform','inhale','inherit','initial',
+'inject','injury','inmate','inner','innocent','input','inquiry','insane',
+'insect','inside','inspire','install','intact','interest','into','invest',
+'invite','involve','iron','island','isolate','issue','item','ivory',
+'jacket','jaguar','jar','jazz','jealous','jeans','jelly','jewel',
+'job','join','joke','journey','joy','judge','juice','jump',
+'jungle','junior','junk','just','kangaroo','keen','keep','ketchup',
+'key','kick','kid','kidney','kind','kingdom','kiss','kit',
+'kitchen','kite','kitten','kiwi','knee','knife','knock','know',
+'lab','label','labor','ladder','lady','lake','lamp','language',
+'laptop','large','later','latin','laugh','laundry','lava','law',
+'lawn','lawsuit','layer','lazy','leader','leaf','learn','leave',
+'lecture','left','leg','legal','legend','leisure','lemon','lend',
+'length','lens','leopard','lesson','letter','level','liar','liberty',
+'library','license','life','lift','light','like','limb','limit',
+'link','lion','liquid','list','little','live','lizard','load',
+'loan','lobster','local','lock','logic','lonely','long','loop',
+'lottery','loud','lounge','love','loyal','lucky','luggage','lumber',
+'lunar','lunch','luxury','lyrics','machine','mad','magic','magnet',
+'maid','mail','main','major','make','mammal','man','manage',
+'mandate','mango','mansion','manual','maple','marble','march','margin',
+'marine','market','marriage','mask','mass','master','match','material',
+'math','matrix','matter','maximum','maze','meadow','mean','measure',
+'meat','mechanic','medal','media','melody','melt','member','memory',
+'mention','menu','mercy','merge','merit','merry','mesh','message',
+'metal','method','middle','midnight','milk','million','mimic','mind',
+'minimum','minor','minute','miracle','mirror','misery','miss','mistake',
+'mix','mixed','mixture','mobile','model','modify','mom','moment',
+'monitor','monkey','monster','month','moon','moral','more','morning',
+'mosquito','mother','motion','motor','mountain','mouse','move','movie',
+'much','muffin','mule','multiply','muscle','museum','mushroom','music',
+'must','mutual','myself','mystery','myth','naive','name','napkin',
+'narrow','nasty','nation','nature','near','neck','need','negative',
+'neglect','neither','nephew','nerve','nest','net','network','neutral',
+'never','news','next','nice','night','noble','noise','nominee',
+'noodle','normal','north','nose','notable','note','nothing','notice',
+'novel','now','nuclear','number','nurse','nut','oak','obey',
+'object','oblige','obscure','observe','obtain','obvious','occur','ocean',
+'october','odor','off','offer','office','often','oil','okay',
+'old','olive','olympic','omit','once','one','onion','online',
+'only','open','opera','opinion','oppose','option','orange','orbit',
+'orchard','order','ordinary','organ','orient','original','orphan','ostrich',
+'other','outdoor','outer','output','outside','oval','oven','over',
+'own','owner','oxygen','oyster','ozone','pact','paddle','page',
+'pair','palace','palm','panda','panel','panic','panther','paper',
+'parade','parent','park','parrot','party','pass','patch','path',
+'patient','patrol','pattern','pause','pave','payment','peace','peanut',
+'pear','peasant','pelican','pen','penalty','pencil','people','pepper',
+'perfect','permit','person','pet','phone','photo','phrase','physical',
+'piano','picnic','picture','piece','pig','pigeon','pill','pilot',
+'pink','pioneer','pipe','pistol','pitch','pizza','place','planet',
+'plastic','plate','play','please','pledge','pluck','plug','plunge',
+'poem','poet','point','polar','pole','police','pond','pony',
+'pool','popular','portion','position','possible','post','potato','pottery',
+'poverty','powder','power','practice','praise','predict','prefer','prepare',
+'present','pretty','prevent','price','pride','primary','print','priority',
+'prison','private','prize','problem','process','produce','profit','program',
+'project','promote','proof','property','prosper','protect','proud','provide',
+'public','pudding','pull','pulp','pulse','pumpkin','punch','pupil',
+'puppy','purchase','purity','purpose','purse','push','put','puzzle',
+'pyramid','quality','quantum','quarter','question','quick','quit','quiz',
+'quote','rabbit','raccoon','race','rack','radar','radio','rail',
+'rain','raise','rally','ramp','ranch','random','range','rapid',
+'rare','rate','rather','raven','raw','razor','ready','real',
+'reason','rebel','rebuild','recall','receive','recipe','record','recycle',
+'reduce','reflect','reform','refuse','region','regret','regular','reject',
+'relax','release','relief','rely','remain','remember','remind','remove',
+'render','renew','rent','reopen','repair','repeat','replace','report',
+'require','rescue','resemble','resist','resource','response','result','retire',
+'retreat','return','reunion','reveal','review','reward','rhythm','rib',
+'ribbon','rice','rich','ride','ridge','rifle','right','rigid',
+'ring','riot','ripple','risk','ritual','rival','river','road',
+'roast','robot','robust','rocket','romance','roof','rookie','room',
+'rose','rotate','rough','round','route','royal','rubber','rude',
+'rug','rule','run','runway','rural','sad','saddle','sadness',
+'safe','sail','salad','salmon','salon','salt','salute','same',
+'sample','sand','satisfy','satoshi','sauce','sausage','save','say',
+'scale','scan','scare','scatter','scene','scheme','school','science',
+'scissors','scorpion','scout','scrap','screen','script','scrub','sea',
+'search','season','seat','second','secret','section','security','seed',
+'seek','segment','select','sell','seminar','senior','sense','sentence',
+'series','service','session','settle','setup','seven','shadow','shaft',
+'shallow','share','shed','shell','sheriff','shield','shift','shine',
+'ship','shiver','shock','shoe','shoot','shop','short','shoulder',
+'shove','shrimp','shrug','shuffle','shy','sibling','sick','side',
+'siege','sight','sign','silent','silk','silly','silver','similar',
+'simple','since','sing','siren','sister','situate','six','size',
+'skate','sketch','ski','skill','skin','skirt','skull','slab',
+'slam','sleep','slender','slice','slide','slight','slim','slogan',
+'slot','slow','slush','small','smart','smile','smoke','smooth',
+'snack','snake','snap','sniff','snow','soap','soccer','social',
+'sock','soda','soft','solar','soldier','solid','solution','solve',
+'someone','song','soon','sorry','sort','soul','sound','soup',
+'source','south','space','spare','spatial','spawn','speak','special',
+'speed','spell','spend','sphere','spice','spider','spike','spin',
+'spirit','split','spoil','sponsor','spoon','sport','spot','spray',
+'spread','spring','spy','square','squeeze','squirrel','stable','stadium',
+'staff','stage','stairs','stamp','stand','start','state','stay',
+'steak','steel','stem','step','stereo','stick','still','sting',
+'stock','stomach','stone','stool','story','stove','strategy','street',
+'strike','strong','struggle','student','stuff','stumble','style','subject',
+'submit','subway','success','such','sudden','suffer','sugar','suggest',
+'suit','summer','sun','sunny','sunset','super','supply','supreme',
+'sure','surface','surge','surprise','surround','survey','suspect','sustain',
+'swallow','swamp','swap','swarm','swear','sweet','swift','swim',
+'swing','switch','sword','symbol','symptom','syrup','system','table',
+'tackle','tag','tail','talent','talk','tank','tape','target',
+'task','taste','tattoo','taxi','teach','team','tell','ten',
+'tenant','tennis','tent','term','test','text','thank','that',
+'theme','then','theory','there','they','thing','this','thought',
+'three','thrive','throw','thumb','thunder','ticket','tide','tiger',
+'tilt','timber','time','tiny','tip','tired','tissue','title',
+'toast','tobacco','today','toddler','toe','together','toilet','token',
+'tomato','tomorrow','tone','tongue','tonight','tool','tooth','top',
+'topic','topple','torch','tornado','tortoise','toss','total','tourist',
+'toward','tower','town','toy','track','trade','traffic','tragic',
+'train','transfer','trap','trash','travel','tray','treat','tree',
+'trend','trial','tribe','trick','trigger','trim','trip','trophy',
+'trouble','truck','true','truly','trumpet','trust','truth','try',
+'tube','tuition','tumble','tuna','tunnel','turkey','turn','turtle',
+'twelve','twenty','twice','twin','twist','two','type','typical',
+'ugly','umbrella','unable','unaware','uncle','uncover','under','undo',
+'unfair','unfold','unhappy','uniform','unique','unit','universe','unknown',
+'unlock','until','unusual','unveil','update','upgrade','uphold','upon',
+'upper','upset','urban','urge','usage','use','used','useful',
+'useless','usual','utility','vacant','vacuum','vague','valid','valley',
+'valve','van','vanish','vapor','various','vast','vault','vehicle',
+'velvet','vendor','venture','venue','verb','verify','version','very',
+'vessel','veteran','viable','vibrant','vicious','victory','video','view',
+'village','vintage','violin','virtual','virus','visa','visit','visual',
+'vital','vivid','vocal','voice','void','volcano','volume','vote',
+'voyage','wage','wagon','wait','walk','wall','walnut','want',
+'warfare','warm','warrior','wash','wasp','waste','water','wave',
+'way','wealth','weapon','wear','weasel','weather','web','wedding',
+'weekend','weird','welcome','west','wet','whale','what','wheat',
+'wheel','when','where','whip','whisper','wide','width','wife',
+'wild','will','win','window','wine','wing','wink','winner',
+'winter','wire','wisdom','wise','wish','witness','wolf','woman',
+'wonder','wood','wool','word','work','world','worry','worth',
+'wrap','wreck','wrestle','wrist','write','wrong','yard','year',
+'yellow','you','young','youth','zebra','zero','zone','zoo'
+]
+
+},{}],78:[function(require,module,exports){
 const rand = require('random-number-csprng')
 
-// Convert a hex string to a byte array
+/** @namespace utils */
+
+/**
+ * Convert a hex string to a byte array
+ * @memberof utils
+ * @param {string} hex 
+ * @returns {number[]} bytes
+ */
 function hexToBytes(hex) {
     if(hex.substr(0,2)=='0x') hex = hex.substr(2)
     if(hex.length % 2 == 1) hex = '0'+ hex
@@ -22972,9 +23020,13 @@ function hexToBytes(hex) {
     bytes.push(parseInt(hex.substr(c, 2), 16));
     return bytes
 }
-var hexToUint8Array = hex => Uint8Array.from(hexToBytes(hex))
 
-// Convert a byte array to a hex string
+/**
+ * Convert a byte array to a hex string
+ * @memberof utils
+ * @param {number[]} bytes 
+ * @returns {string} hex
+ */
 function bytesToHex(bytes) {
     for (var hex = [], i = 0; i < bytes.length; i++) {
         hex.push((bytes[i] >>> 4).toString(16));
@@ -22984,9 +23036,8 @@ function bytesToHex(bytes) {
     if(hex.length % 2 == 1) hex = '0'+ hex
     return hex
 }
-var uint8ArrayToHex = bytes => bytesToHex(bytes)
 
-// unint <--> hex
+// unint <~> hex
 var uint8hex  = u => u.reduce((p,c)=>p+c.toString(16).padStart(2,'0'),'')
 var uint16hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(4,'0'),'')
 var uint32hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(8,'0'),'')
@@ -23002,9 +23053,9 @@ function hex2uintN(n,hex){
     return uintN
 }
 
-// Convert a hex string to a byte array
 /**
  * Reverses hexadecimal string
+ * @memberof utils
  * @param {string} hex - Hexadecimal string
  * @returns {string} Reversed hexadecimal string
  */
@@ -23018,7 +23069,11 @@ function reverseHex(hex) {
     return reverse
 }
 
-// bits <--> hex
+/**
+ * Converts hex string to binary bits
+ * @param {string} hex 
+ * @returns {string} bits
+ */
 function hex2bits(hex) {
     if(hex.substr(0,2)=='0x') hex = hex.substr(2)
     if(hex.length % 2 == 1) hex = '0'+ hex
@@ -23027,7 +23082,11 @@ function hex2bits(hex) {
     }
     return bits.join('')
 }
-
+/**
+ * Converts binary bits to hex string
+ * @param {string} bits 
+ * @returns {string} hex
+ */
 function bits2hex(bits) {
     buf = ''
     hex = ''
@@ -23041,10 +23100,10 @@ function bits2hex(bits) {
 }
 
 /**
- * Converts a bit string to an array of N-bit unsigned integers
+ * Converts a bits string to an array of N-bit unsigned integers
  * @param   {number} n      Number of bits
  * @param   {string} bits   Bits string
- * @returns {int[]}         Array of unsigned integers
+ * @returns {number[]}   Array of N-bit unsigned integers
  */
 function bits2uintN(n,bits) {
     uintN = []
@@ -23055,8 +23114,19 @@ function bits2uintN(n,bits) {
     return uintN
 }
 
+/**
+ * Converts array of N-bit unsigned integers to bits string
+ * @param {number} n Number of bits per number
+ * @param {number[]} u Array of N-bit unsigned integers 
+ * @returns {string} bits
+ */
 var uintN2bits = (n,u) => u.reduce((p,c)=>p+c.toString(2).padStart(n,'0'),'')
 
+/**
+ * Encodes Hex into Base32
+ * @param {string} hex 
+ * @returns {string} Base32 encoded string
+ */
 function hex2b32(hex){
     iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
     bits = hex2bits(hex)
@@ -23071,6 +23141,11 @@ function hex2b32(hex){
     return b32.join('') + pad
 }
 
+/**
+ * Dencodes Base32 string
+ * @param {string} b32 Base32 encoded string
+ * @returns {string} Hex
+ */
 function b32hex(b32){
     iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
     b32 = b32.replace(/=/gi,'')
@@ -23080,6 +23155,11 @@ function b32hex(b32){
     return bits2hex(bits)
 }
 
+/**
+ * Converts array of bytes into array of 11-bit numbers
+ * @param {number[]} bytes Array of bytes
+ * @returns {number[]} Array of 11-bit numbers
+ */
 function bytes2b11(bytes){
     bits = ''
     b11 = []
@@ -23092,8 +23172,18 @@ function bytes2b11(bytes){
     return b11
 }
 
+/**
+ * Generates random bytes array in hexadecimal
+ * @param {number} size Number of bytes
+ * @returns {string} Hex
+ */
 var randomHex = size => randomArray(size).then(a => uint8hex(Uint8Array.from(a)))
 
+/**
+ * Generates random bytes array using a CSPRNG module
+ * @param {number} size Number of bytes
+ * @returns {Promise<number[]>} Array of bytes
+ */
 function randomArray(size){
     var a = []
     for (var i = 0; i < size; i++) {
@@ -23102,20 +23192,45 @@ function randomArray(size){
     return Promise.all(a)
 }
 
+/**
+ * Generates array with numbers from 0 [+ offset] to N [+ offset]
+ * @param {number} n     Size of array
+ * @param {number} [o=0] Offset
+ * @returns {Array} Array with N numbers
+ */
 const range = (n,o=0) => Array.from(new Uint8Array(n).map((e,i)=>i+o))
+
+/**
+ * Split string every N position
+ * @param {string} s String to split
+ * @param {number} n 
+ * @returns {}
+ */
 const splitter = (s,n) => Array.from(new Uint8Array(Math.ceil(s.length/n)).map( (e,i) => i*n ) ).map(i => s.substr(i,n))
+
+/**
+ * Chains functions together and passes return 
+ * value to the next function as an argument
+ * @param  {...any} fns List of functions
+ * @returns {any}
+ * @example
+ * f1 = x => x**2
+ * f2 = y => y-1
+ * c1 = z => compose(f1,f2)(z)
+ * c1(5) // returns 24
+ * c1(4) // returns 15
+ */
 const compose = (...fns) => arg => fns.reduce((composed, f) => f(composed), arg)
 
-
 module.exports = {
-    hexToBytes, hexToUint8Array, bytesToHex, uint8ArrayToHex,
+    hexToBytes, bytesToHex,
     uint8hex, uint16hex, uint32hex, uintN2hex,
     hex2uintN, reverseHex, hex2bits, bits2hex, 
     bits2uintN, uintN2bits, hex2b32, b32hex, 
     bytes2b11, randomHex, randomArray, range,
     splitter, compose
 }
-},{"random-number-csprng":76}],79:[function(require,module,exports){
+},{"random-number-csprng":74}],79:[function(require,module,exports){
 'use strict';
 
 const asn1 = exports;
@@ -24929,8 +25044,8 @@ PEMEncoder.prototype.encode = function encode(data, options) {
 };
 
 },{"./der":90,"inherits":210}],93:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"buffer":97,"dup":4}],94:[function(require,module,exports){
+arguments[4][2][0].apply(exports,arguments)
+},{"buffer":97,"dup":2}],94:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -28632,8 +28747,8 @@ function fromByteArray (uint8) {
 })(typeof module === 'undefined' || module, this);
 
 },{"buffer":97}],96:[function(require,module,exports){
-arguments[4][5][0].apply(exports,arguments)
-},{"crypto":97,"dup":5}],97:[function(require,module,exports){
+arguments[4][3][0].apply(exports,arguments)
+},{"crypto":97,"dup":3}],97:[function(require,module,exports){
 
 },{}],98:[function(require,module,exports){
 // based on the aes implimentation in triple sec
@@ -35599,8 +35714,8 @@ function formatReturnValue (bn, enc, len) {
 
 }).call(this)}).call(this,require("buffer").Buffer)
 },{"bn.js":144,"buffer":141,"elliptic":161}],144:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"buffer":97,"dup":4}],145:[function(require,module,exports){
+arguments[4][2][0].apply(exports,arguments)
+},{"buffer":97,"dup":2}],145:[function(require,module,exports){
 'use strict'
 var inherits = require('inherits')
 var MD5 = require('md5.js')
@@ -36884,42 +36999,42 @@ module.exports={
     }
 }
 },{}],160:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"buffer":97,"dup":4}],161:[function(require,module,exports){
+arguments[4][2][0].apply(exports,arguments)
+},{"buffer":97,"dup":2}],161:[function(require,module,exports){
+arguments[4][42][0].apply(exports,arguments)
+},{"../package.json":177,"./elliptic/curve":164,"./elliptic/curves":167,"./elliptic/ec":168,"./elliptic/eddsa":171,"./elliptic/utils":175,"brorand":96,"dup":42}],162:[function(require,module,exports){
+arguments[4][43][0].apply(exports,arguments)
+},{"../utils":175,"bn.js":176,"dup":43}],163:[function(require,module,exports){
 arguments[4][44][0].apply(exports,arguments)
-},{"../package.json":177,"./elliptic/curve":164,"./elliptic/curves":167,"./elliptic/ec":168,"./elliptic/eddsa":171,"./elliptic/utils":175,"brorand":96,"dup":44}],162:[function(require,module,exports){
+},{"../utils":175,"./base":162,"bn.js":176,"dup":44,"inherits":210}],164:[function(require,module,exports){
 arguments[4][45][0].apply(exports,arguments)
-},{"../utils":175,"bn.js":176,"dup":45}],163:[function(require,module,exports){
+},{"./base":162,"./edwards":163,"./mont":165,"./short":166,"dup":45}],165:[function(require,module,exports){
 arguments[4][46][0].apply(exports,arguments)
-},{"../utils":175,"./base":162,"bn.js":176,"dup":46,"inherits":210}],164:[function(require,module,exports){
+},{"../utils":175,"./base":162,"bn.js":176,"dup":46,"inherits":210}],166:[function(require,module,exports){
 arguments[4][47][0].apply(exports,arguments)
-},{"./base":162,"./edwards":163,"./mont":165,"./short":166,"dup":47}],165:[function(require,module,exports){
+},{"../utils":175,"./base":162,"bn.js":176,"dup":47,"inherits":210}],167:[function(require,module,exports){
 arguments[4][48][0].apply(exports,arguments)
-},{"../utils":175,"./base":162,"bn.js":176,"dup":48,"inherits":210}],166:[function(require,module,exports){
+},{"./curve":164,"./precomputed/secp256k1":174,"./utils":175,"dup":48,"hash.js":196}],168:[function(require,module,exports){
 arguments[4][49][0].apply(exports,arguments)
-},{"../utils":175,"./base":162,"bn.js":176,"dup":49,"inherits":210}],167:[function(require,module,exports){
+},{"../curves":167,"../utils":175,"./key":169,"./signature":170,"bn.js":176,"brorand":96,"dup":49,"hmac-drbg":208}],169:[function(require,module,exports){
 arguments[4][50][0].apply(exports,arguments)
-},{"./curve":164,"./precomputed/secp256k1":174,"./utils":175,"dup":50,"hash.js":196}],168:[function(require,module,exports){
+},{"../utils":175,"bn.js":176,"dup":50}],170:[function(require,module,exports){
 arguments[4][51][0].apply(exports,arguments)
-},{"../curves":167,"../utils":175,"./key":169,"./signature":170,"bn.js":176,"brorand":96,"dup":51,"hmac-drbg":208}],169:[function(require,module,exports){
+},{"../utils":175,"bn.js":176,"dup":51}],171:[function(require,module,exports){
 arguments[4][52][0].apply(exports,arguments)
-},{"../utils":175,"bn.js":176,"dup":52}],170:[function(require,module,exports){
+},{"../curves":167,"../utils":175,"./key":172,"./signature":173,"dup":52,"hash.js":196}],172:[function(require,module,exports){
 arguments[4][53][0].apply(exports,arguments)
-},{"../utils":175,"bn.js":176,"dup":53}],171:[function(require,module,exports){
+},{"../utils":175,"dup":53}],173:[function(require,module,exports){
 arguments[4][54][0].apply(exports,arguments)
-},{"../curves":167,"../utils":175,"./key":172,"./signature":173,"dup":54,"hash.js":196}],172:[function(require,module,exports){
+},{"../utils":175,"bn.js":176,"dup":54}],174:[function(require,module,exports){
 arguments[4][55][0].apply(exports,arguments)
-},{"../utils":175,"dup":55}],173:[function(require,module,exports){
+},{"dup":55}],175:[function(require,module,exports){
 arguments[4][56][0].apply(exports,arguments)
-},{"../utils":175,"bn.js":176,"dup":56}],174:[function(require,module,exports){
+},{"bn.js":176,"dup":56,"minimalistic-assert":214,"minimalistic-crypto-utils":215}],176:[function(require,module,exports){
+arguments[4][2][0].apply(exports,arguments)
+},{"buffer":97,"dup":2}],177:[function(require,module,exports){
 arguments[4][57][0].apply(exports,arguments)
-},{"dup":57}],175:[function(require,module,exports){
-arguments[4][58][0].apply(exports,arguments)
-},{"bn.js":176,"dup":58,"minimalistic-assert":214,"minimalistic-crypto-utils":215}],176:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"buffer":97,"dup":4}],177:[function(require,module,exports){
-arguments[4][59][0].apply(exports,arguments)
-},{"dup":59}],178:[function(require,module,exports){
+},{"dup":57}],178:[function(require,module,exports){
 // Copyright Joyent, Inc. and other Node contributors.
 //
 // Permission is hereby granted, free of charge, to any person obtaining a
@@ -37593,32 +37708,32 @@ arguments[4][138][0].apply(exports,arguments)
 },{"dup":138,"events":178}],195:[function(require,module,exports){
 arguments[4][139][0].apply(exports,arguments)
 },{"./lib/_stream_duplex.js":182,"./lib/_stream_passthrough.js":183,"./lib/_stream_readable.js":184,"./lib/_stream_transform.js":185,"./lib/_stream_writable.js":186,"./lib/internal/streams/end-of-stream.js":190,"./lib/internal/streams/pipeline.js":192,"dup":139}],196:[function(require,module,exports){
+arguments[4][58][0].apply(exports,arguments)
+},{"./hash/common":197,"./hash/hmac":198,"./hash/ripemd":199,"./hash/sha":200,"./hash/utils":207,"dup":58}],197:[function(require,module,exports){
+arguments[4][59][0].apply(exports,arguments)
+},{"./utils":207,"dup":59,"minimalistic-assert":214}],198:[function(require,module,exports){
 arguments[4][60][0].apply(exports,arguments)
-},{"./hash/common":197,"./hash/hmac":198,"./hash/ripemd":199,"./hash/sha":200,"./hash/utils":207,"dup":60}],197:[function(require,module,exports){
+},{"./utils":207,"dup":60,"minimalistic-assert":214}],199:[function(require,module,exports){
 arguments[4][61][0].apply(exports,arguments)
-},{"./utils":207,"dup":61,"minimalistic-assert":214}],198:[function(require,module,exports){
+},{"./common":197,"./utils":207,"dup":61}],200:[function(require,module,exports){
 arguments[4][62][0].apply(exports,arguments)
-},{"./utils":207,"dup":62,"minimalistic-assert":214}],199:[function(require,module,exports){
+},{"./sha/1":201,"./sha/224":202,"./sha/256":203,"./sha/384":204,"./sha/512":205,"dup":62}],201:[function(require,module,exports){
 arguments[4][63][0].apply(exports,arguments)
-},{"./common":197,"./utils":207,"dup":63}],200:[function(require,module,exports){
+},{"../common":197,"../utils":207,"./common":206,"dup":63}],202:[function(require,module,exports){
 arguments[4][64][0].apply(exports,arguments)
-},{"./sha/1":201,"./sha/224":202,"./sha/256":203,"./sha/384":204,"./sha/512":205,"dup":64}],201:[function(require,module,exports){
+},{"../utils":207,"./256":203,"dup":64}],203:[function(require,module,exports){
 arguments[4][65][0].apply(exports,arguments)
-},{"../common":197,"../utils":207,"./common":206,"dup":65}],202:[function(require,module,exports){
+},{"../common":197,"../utils":207,"./common":206,"dup":65,"minimalistic-assert":214}],204:[function(require,module,exports){
 arguments[4][66][0].apply(exports,arguments)
-},{"../utils":207,"./256":203,"dup":66}],203:[function(require,module,exports){
+},{"../utils":207,"./512":205,"dup":66}],205:[function(require,module,exports){
 arguments[4][67][0].apply(exports,arguments)
-},{"../common":197,"../utils":207,"./common":206,"dup":67,"minimalistic-assert":214}],204:[function(require,module,exports){
+},{"../common":197,"../utils":207,"dup":67,"minimalistic-assert":214}],206:[function(require,module,exports){
 arguments[4][68][0].apply(exports,arguments)
-},{"../utils":207,"./512":205,"dup":68}],205:[function(require,module,exports){
+},{"../utils":207,"dup":68}],207:[function(require,module,exports){
 arguments[4][69][0].apply(exports,arguments)
-},{"../common":197,"../utils":207,"dup":69,"minimalistic-assert":214}],206:[function(require,module,exports){
+},{"dup":69,"inherits":210,"minimalistic-assert":214}],208:[function(require,module,exports){
 arguments[4][70][0].apply(exports,arguments)
-},{"../utils":207,"dup":70}],207:[function(require,module,exports){
-arguments[4][71][0].apply(exports,arguments)
-},{"dup":71,"inherits":210,"minimalistic-assert":214}],208:[function(require,module,exports){
-arguments[4][72][0].apply(exports,arguments)
-},{"dup":72,"hash.js":196,"minimalistic-assert":214,"minimalistic-crypto-utils":215}],209:[function(require,module,exports){
+},{"dup":70,"hash.js":196,"minimalistic-assert":214,"minimalistic-crypto-utils":215}],209:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -37706,8 +37821,8 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
 }
 
 },{}],210:[function(require,module,exports){
-arguments[4][73][0].apply(exports,arguments)
-},{"dup":73}],211:[function(require,module,exports){
+arguments[4][71][0].apply(exports,arguments)
+},{"dup":71}],211:[function(require,module,exports){
 'use strict'
 var inherits = require('inherits')
 var HashBase = require('hash-base')
@@ -37973,12 +38088,12 @@ MillerRabin.prototype.getDivisor = function getDivisor(n, k) {
 };
 
 },{"bn.js":213,"brorand":96}],213:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"buffer":97,"dup":4}],214:[function(require,module,exports){
-arguments[4][74][0].apply(exports,arguments)
-},{"dup":74}],215:[function(require,module,exports){
-arguments[4][75][0].apply(exports,arguments)
-},{"dup":75}],216:[function(require,module,exports){
+arguments[4][2][0].apply(exports,arguments)
+},{"buffer":97,"dup":2}],214:[function(require,module,exports){
+arguments[4][72][0].apply(exports,arguments)
+},{"dup":72}],215:[function(require,module,exports){
+arguments[4][73][0].apply(exports,arguments)
+},{"dup":73}],216:[function(require,module,exports){
 module.exports={"2.16.840.1.101.3.4.1.1": "aes-128-ecb",
 "2.16.840.1.101.3.4.1.2": "aes-128-cbc",
 "2.16.840.1.101.3.4.1.3": "aes-128-ofb",
@@ -38854,8 +38969,8 @@ function i2ops (c) {
 }
 
 },{"create-hash":145,"safe-buffer":238}],230:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"buffer":97,"dup":4}],231:[function(require,module,exports){
+arguments[4][2][0].apply(exports,arguments)
+},{"buffer":97,"dup":2}],231:[function(require,module,exports){
 var parseKeys = require('parse-asn1')
 var mgf = require('./mgf')
 var xor = require('./xor')
@@ -40971,5 +41086,5 @@ function config (name) {
 }
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{}]},{},[1])(1)
+},{}]},{},[76])(76)
 });

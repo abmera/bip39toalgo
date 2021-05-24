@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Home - Documentation</title>
+    <title>src/utils.js - Documentation</title>
 
     <script src="scripts/prettify/prettify.js"></script>
     <script src="scripts/prettify/lang-css.js"></script>
@@ -29,129 +29,245 @@
 
 <div id="main">
     
+    <h1 class="page-title">src/utils.js</h1>
+    
 
     
 
 
 
     
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const rand = require('random-number-csprng')
 
+/** @namespace utils */
 
+/**
+ * Convert a hex string to a byte array
+ * @memberof utils
+ * @param {string} hex 
+ * @returns {number[]} bytes
+ */
+function hexToBytes(hex) {
+    if(hex.substr(0,2)=='0x') hex = hex.substr(2)
+    if(hex.length % 2 == 1) hex = '0'+ hex
+    for (var bytes = [], c = 0; c &lt; hex.length; c += 2)
+    bytes.push(parseInt(hex.substr(c, 2), 16));
+    return bytes
+}
 
+/**
+ * Convert a byte array to a hex string
+ * @memberof utils
+ * @param {number[]} bytes 
+ * @returns {string} hex
+ */
+function bytesToHex(bytes) {
+    for (var hex = [], i = 0; i &lt; bytes.length; i++) {
+        hex.push((bytes[i] >>> 4).toString(16));
+        hex.push((bytes[i] &amp; 0xF).toString(16));
+    }
+    hex = hex.join("")
+    if(hex.length % 2 == 1) hex = '0'+ hex
+    return hex
+}
 
+// unint &lt;~> hex
+var uint8hex  = u => u.reduce((p,c)=>p+c.toString(16).padStart(2,'0'),'')
+var uint16hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(4,'0'),'')
+var uint32hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(8,'0'),'')
+var uintN2hex = (n,u) => u.reduce((p,c)=>p+c.toString(16).padStart(n/8*2,'0'),'')
 
+function hex2uintN(n,hex){
+    if(n % 8 > 0 &amp;&amp; n &lt; 54) return -1 // muliple of 8 bits &amp; less than Number.MAX_SAFE_INTEGER
+    if(hex.length % 2 == 1) hex = '0' + hex
+    blen = hex.length * 8 / 2
+    if(blen % n > 0) hex = hex + 'xx'.repeat((n-blen%n)/8)
+    regexp = new RegExp('[a-fA-Z0-9x]{'+2*n/8+'}','g')
+    uintN = Array.from(hex.matchAll(regexp),m => parseInt(m[0].replace(/x/gi),16))
+    return uintN
+}
 
+/**
+ * Reverses hexadecimal string
+ * @memberof utils
+ * @param {string} hex - Hexadecimal string
+ * @returns {string} Reversed hexadecimal string
+ */
+function reverseHex(hex) {
+    if(hex.substr(0,2)=='0x') hex = hex.substr(2)
+    if(hex.length % 2 == 1) hex = '0'+ hex 
+    for (var reverse = '', i=0; i &lt; hex.length; i += 2){
+        // console.log(hex.length-2-i)
+        reverse += hex.substr(hex.length-2-i,2)
+    }
+    return reverse
+}
 
+/**
+ * Converts hex string to binary bits
+ * @param {string} hex 
+ * @returns {string} bits
+ */
+function hex2bits(hex) {
+    if(hex.substr(0,2)=='0x') hex = hex.substr(2)
+    if(hex.length % 2 == 1) hex = '0'+ hex
+    for (var bits = [], c = 0; c &lt; hex.length; c += 2){
+        bits.push(parseInt(hex.substr(c, 2), 16).toString(2).padStart(8,'0'));
+    }
+    return bits.join('')
+}
+/**
+ * Converts binary bits to hex string
+ * @param {string} bits 
+ * @returns {string} hex
+ */
+function bits2hex(bits) {
+    buf = ''
+    hex = ''
+    while(bits.length > 0){
+        buf = bits.substr(0,8)
+        hex += parseInt(buf,2).toString(16).padStart(2,'0')
+        bits = bits.substr(8)
+        buf = ''
+    }
+    return hex
+}
 
+/**
+ * Converts a bits string to an array of N-bit unsigned integers
+ * @param   {number} n      Number of bits
+ * @param   {string} bits   Bits string
+ * @returns {number[]}   Array of N-bit unsigned integers
+ */
+function bits2uintN(n,bits) {
+    uintN = []
+    while(bits.length > 0){
+        uintN.push(parseInt(bits.substr(0,n),2))
+        bits = bits.substr(n)
+    }
+    return uintN
+}
 
-    
+/**
+ * Converts array of N-bit unsigned integers to bits string
+ * @param {number} n Number of bits per number
+ * @param {number[]} u Array of N-bit unsigned integers 
+ * @returns {string} bits
+ */
+var uintN2bits = (n,u) => u.reduce((p,c)=>p+c.toString(2).padStart(n,'0'),'')
 
+/**
+ * Encodes Hex into Base32
+ * @param {string} hex 
+ * @returns {string} Base32 encoded string
+ */
+function hex2b32(hex){
+    iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+    bits = hex2bits(hex)
+    b32 = []
+    while(bits.length > 0){
+        i = parseInt(bits.substr(0,5).padEnd(5,'0'),2)
+        b32.push(iambase32.substr(i,1))
+        bits = bits.substr(5)
+    }
+    pad = ''
+    if(b32.length % 8 > 0) pad = '='.repeat(8 - b32.length % 8)
+    return b32.join('') + pad
+}
 
-    <section class="readme">
-        <article><h1>BIP39 to Algorand Mneminic</h1>
-<h2>Motivation</h2>
-<p>As a paranoid long-term Algo holder with a Ledger wallet, this tool is the answer to the question: <em>What if my Ledger device malfunctions or I misplace it and don't have access to a new one?</em></p>
-<p>While some advances have been made in terms of interoperability and recoverability across wallet clients (more details in <a href="https://walletsrecovery.org/">WalletsRecovery</a>), there is still a considerable amount of inconsistencies. Thus, I couldn't just enter my Ledger recovery phrase (BIP39 mnemonic) in another multi-account wallet like Coinomi, Exodus or Trust. Also, I wanted to have the Algorand native 25-word recovery phrase in paper so that I could use in the official app to access my funds as a backup plan.</p>
-<h2>How to Use</h2>
-<h3>Web App</h3>
-<p>To use the main functionality of this tool:</p>
-<ol>
-<li>Select the <code>Mnemonic Tool</code> tab</li>
-<li>Enter your wallet <code>BIP39 mnemonic</code> (12-24 words recovery phrase)</li>
-<li>Choose your <code>Wallet Client</code> (currently known derivation paths for: Atomic, Coinomi, Exodus, Ledger and Trust)</li>
-<li>Press <code>Start</code></li>
-<li>Confirm that the <code>Algorand Address</code> displayed matches your current address</li>
-<li>Write down your secret in a piece of paper and store it in a secure place. Do not take a screenshot! Take the necessary precautions to store your secret!</li>
-</ol>
-<p>If your <code>Wallet Client</code> is not listed you could use the <code>Search</code> functionality which will try multiple derivation method/path combinations to find one that matches your <code>Current Address</code>, or play around with the <code>Custom</code> option.</p>
-<h3>Offline Usage</h3>
-<ol>
-<li>Download this zip file: <a href="ambip39toalgo.zip">Standalone Mnemonic Tool</a></li>
-<li>Disconnect from the Internet</li>
-<li>Unzip the file and open the <code>index.html</code> file</li>
-</ol>
-<h3>Node app</h3>
-<ol>
-<li>Download and clone this repository</li>
-<li>Change directory to project folder</li>
-<li>Install dependencies with <code>npm install</code></li>
-<li>Main app code is in <code>src/ambip39toalgo.js</code></li>
-</ol>
-<h4>Example</h4>
-<p>Uncomment these lines in <a href="src/ambip39toalgo.js"><code>src/ambip39toalgo.js</code></a></p>
-<pre class="prettyprint source lang-javascript"><code>deriveMnemonic(mnemonic,&quot;slip10-ed25519&quot;, &quot;m/44'/283'/0'/0/0&quot;)
-.then(node => {
-    console.log(node.algo.key)
-    console.log(node.algo.address)
-    words = prettifyWordsTTB(node.algo.words)
-    console.log(words)
-})
-// Returns:
-// 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
-// NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
-//  1. sorry       6. laugh      11. setup      16. employ     21. favorite   
-//  2. aisle       7. tissue     12. kit        17. call       22. gaze       
-//  3. similar     8. upset      13. isolate    18. venture    23. maximum    
-//  4. royal       9. volcano    14. bonus      19. item       24. abandon    
-//  5. unveil     10. beach      15. poem       20. snack      25. leave 
-</code></pre>
-<h2>Derivation Method</h2>
-<p><code>slip10-ed25519</code> uses <a href="https://github.com/satoshilabs/slips/blob/master/slip-0010.md">SLIP10</a> standard with elliptic curve ed25519
-<code>slip10-secp256k1</code> uses <a href="https://github.com/satoshilabs/slips/blob/master/slip-0010.md">SLIP10</a> standard with elliptic curve secp256k1
-<code>kholaw-ed25519</code> implements paper from D. Khovratovich and J. Law, &quot; <a href="https://ieeexplore.ieee.org/abstract/document/7966967">BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace</a>&quot;, 2017 IEEE European Symposium on Security and Privacy Workshops (EuroS&amp;PW), 2017, pp. 27-31, doi: 10.1109/EuroSPW.2017.47.
-<code>bip39-seed</code> does not derive the key, uses first 32 bytes of the BIP39 seed</p>
-<h2>Open Source</h2>
-<p>This project is 100% open source, get the source code in the repository in <a href="https://github.com/">GitHub</a></p>
-<h2>Buy Me a Coffee</h2>
-<p>Coffee donations are welcome: <code>TIPKTP7LNT2SZ52445YP2YSZJQV53Z4FSJSIWLMKTSABZIVQ4L73U2QC3A</code></p>
-<h2>License</h2>
-<p>Please refer to the software <a href="LICENSE">license</a> for more details.</p>
-<p><em>The software is provided &quot;as is&quot;, without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.</em></p>
-<h2>Test Vectors</h2>
-<h3>Atomic Wallet</h3>
-<pre class="prettyprint source"><code>Bip39 Mnemonic: 	all all all all all all all all all all all all
-Bip39 Passphrase: 	&quot;&quot; (blank)
-Derivathon Method: 	bip39-seed
-Derivathon Path: 	None
-Algorand Address: 	YQDDGDM3BKPQ5RAIYGCT7JX6DCIMVQHTHITSPJWKNLIPETB2JR6MPKC43A
-Algorand Secret: 	ocean claim giraffe exercise dove sell deputy essay clog brother lesson produce whisper damage subway shoulder ten bike torch also voyage fine where able scan
-</code></pre>
-<h3>Coinomi and Trust Wallets</h3>
-<pre class="prettyprint source"><code>Bip39 Mnemonic: 	all all all all all all all all all all all all all all all all all all all all all all all feel
-Bip39 Passphrase: 	&quot;&quot; (blank)
-Derivathon Method: 	slip10-ed25519
-Derivathon Path: 	m/44'/283'/0'/0/0
-Algorand Address: 	NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
-Algorand Secret: 	sorry aisle similar royal unveil laugh tissue upset volcano beach setup kit isolate bonus poem employ call venture item snack favorite gaze maximum abandon leave 
-</code></pre>
-<h3>Exodus Wallet</h3>
-<pre class="prettyprint source"><code>Bip39 Mnemonic: 	all all all all all all all all all all all all
-Bip39 Passphrase: 	&quot;&quot; (blank)
-Derivathon Method: 	slip10-secp256k1
-Derivathon Path: 	m/44'/283'/0'/0/0
-Algorand Address: 	ZXLNDDUAYCYFXJI33HXUXLNVUTMQMSG6HRXV6JT2KNSU2SP4J7GUZG5BWU
-Algorand Secret: 	ghost price deny catalog gallery know boat acoustic mouse extend track member pitch media bunker border miss near vendor rapid meat idle verb above chief 
-</code></pre>
-<h3>Ledger Wallet</h3>
-<pre class="prettyprint source"><code>Bip39 Mnemonic: 	all all all all all all all all all all all all all all all all all all all all all all all feel
-Bip39 Passphrase: 	&quot;&quot; (blank)
-Derivathon Method: 	kholaw-ed25519
-Derivathon Path: 	m/44'/283'/0'/0/0
-Algorand Address: 	NVGXFOROGBDBUW6CEQDX6V742PWFPLXUDKW6V7HOZHFD7GSQEB556GUZII
-Algorand Secret: 	pear punch quantum token ridge pumpkin language jewel indicate share champion rose logic body stock army chase cement hour mandate vapor grief juice able coast
-</code></pre>
-<h2>Libraries</h2>
-<p><a href="https://github.com/brix/crypto-js">CryptoJS</a>
-<a href="http://danml.com/download.html">download</a>
-<a href="https://github.com/indutny/elliptic">Elliptic</a>
-<a href="https://jquery.com/">jQuery</a>
-<a href="https://www.jqueryscript.net/other/Canvas-Table-QR-Code-Generator.html">jQuery qrcode</a>
-<a href="https://pdf-lib.js.org/">PDF-LIB</a>
-<a href="https://github.com/joepie91/node-random-number-csprng">random-number-csprng</a>
-<a href="https://getbootstrap.com/">Twitter Bootstrap</a></p></article>
+/**
+ * Dencodes Base32 string
+ * @param {string} b32 Base32 encoded string
+ * @returns {string} Hex
+ */
+function b32hex(b32){
+    iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+    b32 = b32.replace(/=/gi,'')
+    pad = (b32.length * 5) % 8
+    bits = b32.split('').map(c => iambase32.search(c).toString(2).padStart(5,'0')).join('')
+    if(pad > 0) bits = bits.substr(0, bits.length - pad)
+    return bits2hex(bits)
+}
+
+/**
+ * Converts array of bytes into array of 11-bit numbers
+ * @param {number[]} bytes Array of bytes
+ * @returns {number[]} Array of 11-bit numbers
+ */
+function bytes2b11(bytes){
+    bits = ''
+    b11 = []
+    for (let i=bytes.length-1; i >= 0; i--)
+        bits += bytes[i].toString(2).padStart(8,0)
+    while (bits != ''){
+        b11.push(parseInt(bits.substr(-11),2))
+        bits = bits.substr(0,bits.length-11)
+    }
+    return b11
+}
+
+/**
+ * Generates random bytes array in hexadecimal
+ * @param {number} size Number of bytes
+ * @returns {string} Hex
+ */
+var randomHex = size => randomArray(size).then(a => uint8hex(Uint8Array.from(a)))
+
+/**
+ * Generates random bytes array using a CSPRNG module
+ * @param {number} size Number of bytes
+ * @returns {Promise&lt;number[]>} Array of bytes
+ */
+function randomArray(size){
+    var a = []
+    for (var i = 0; i &lt; size; i++) {
+        a.push(rand(0,255))
+    }
+    return Promise.all(a)
+}
+
+/**
+ * Generates array with numbers from 0 [+ offset] to N [+ offset]
+ * @param {number} n     Size of array
+ * @param {number} [o=0] Offset
+ * @returns {Array} Array with N numbers
+ */
+const range = (n,o=0) => Array.from(new Uint8Array(n).map((e,i)=>i+o))
+
+/**
+ * Split string every N position
+ * @param {string} s String to split
+ * @param {number} n 
+ * @returns {}
+ */
+const splitter = (s,n) => Array.from(new Uint8Array(Math.ceil(s.length/n)).map( (e,i) => i*n ) ).map(i => s.substr(i,n))
+
+/**
+ * Chains functions together and passes return 
+ * value to the next function as an argument
+ * @param  {...any} fns List of functions
+ * @returns {any}
+ * @example
+ * f1 = x => x**2
+ * f2 = y => y-1
+ * c1 = z => compose(f1,f2)(z)
+ * c1(5) // returns 24
+ * c1(4) // returns 15
+ */
+const compose = (...fns) => arg => fns.reduce((composed, f) => f(composed), arg)
+
+module.exports = {
+    hexToBytes, bytesToHex,
+    uint8hex, uint16hex, uint32hex, uintN2hex,
+    hex2uintN, reverseHex, hex2bits, bits2hex, 
+    bits2uintN, uintN2bits, hex2b32, b32hex, 
+    bytes2b11, randomHex, randomArray, range,
+    splitter, compose
+}</code></pre>
+        </article>
     </section>
-
-
 
 
 

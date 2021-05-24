@@ -14,164 +14,173 @@
   <div class="container position-relative my-4 col-lg-10 col-xl-8">
     <ul class="nav nav-tabs">
       <li class="nav-item">
-        <a class="nav-link active" aria-current="page" href="#" id="mnemoTab">Mnemonic Tool</a>
+        <a class="nav-link active" aria-current="page" href="#mnemoTab" id="mnemoTab">Mnemonic Tool</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#" id="addressTab">My Cool Address</a>
+        <a class="nav-link" href="#addressTab" id="addressTab">My Cool Address</a>
       </li>
       <li class="nav-item">
-        <a class="nav-link" href="#" id="infoTab">More Info</a>
+        <a class="nav-link" href="#infoTab" id="infoTab">More Info</a>
       </li>
     </ul>
     <div class="position-sticky start-50 top-0 bg-white" style="z-index: 998;">
-      <div id="status" class="position-absolute end-0 top-0 mt-1 rounded font-monospace"
-        style="z-index: 999;">
-        <small></small>
+      <div id="status" class="position-absolute end-0 top-0 mt-1 rounded font-monospace 
+                              text-dark bg-warning shadow-sm px-3 py-1" style="z-index: 999;">
+        <small>Loading...</small>
       </div>
     </div>
 
     <br>
 
     <div class="row">
-      <h2 id="mainTitle">BIP39 to Algorand Mnemonic</h2>
+      <h2 id="mainTitle">
+        <div class="d-flex justify-content-center">
+          <div class="spinner-border text-secondary" role="status"></div>
+        </div>
+      </h2>
     </div>
 
-    <div class="row mnemo-tab">
-      <p class="">
-        This tool allows you to 'convert' your 
-        <a href="https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki" target="_blank">BIP39</a>
-        mnemonic phrase (12-24 words) to Algorand's native mnemonic (25
-        words)
-        that you could use in the official Algorand app (
-        <a href="https://apps.apple.com/us/app/algorand-wallet/id1459898525" target="_blank">iOS</a>,
-        <a href="https://play.google.com/store/apps/details?id=com.algorand.android" target="_blank">Android</a>
-        ) or with
-        <a href="https://wallet.myalgo.com/home" target="_blank">My Algo</a> wallet.
-      </p>
-    </div>
+    <div class="mnemo-tab">
+      <div class="row ">
+        <p class="">
+          This tool allows you to 'convert' your 
+          <a href="https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki" target="_blank">BIP39</a>
+          mnemonic phrase (12-24 words) to Algorand's native mnemonic (25
+          words)
+          that you could use in the official Algorand app (
+          <a href="https://apps.apple.com/us/app/algorand-wallet/id1459898525" target="_blank">iOS</a>,
+          <a href="https://play.google.com/store/apps/details?id=com.algorand.android" target="_blank">Android</a>
+          ) or with
+          <a href="https://wallet.myalgo.com/home" target="_blank">My Algo</a> wallet.
+        </p>
+      </div>
 
-    <div class="input-group input-group-sm mb-3 mnemo-tab justify-content-start">
-      <input type="button" class="btn btn-primary btn-sm col-md-3 col-sm-4 col-6" id="mnemoRand" value="Generate" />
-      <div class="col-md-2 col-sm-2 col-3">
-        <select class="form-select form-select-sm" id="mnemoRandSize">
-          <option value="12">12</option>
-          <option value="15">15</option>
-          <option value="18">18</option>
-          <option value="21">21</option>
-          <option value="24" selected>24</option>
+      <div class="input-group input-group-sm mb-3  justify-content-start">
+        <input type="button" class="btn btn-primary btn-sm col-md-3 col-sm-4 col-6" id="mnemoRand" value="Generate" />
+        <div class="col-md-2 col-sm-2 col-3">
+          <select class="form-select form-select-sm" id="mnemoRandSize">
+            <option value="12">12</option>
+            <option value="15">15</option>
+            <option value="18">18</option>
+            <option value="21">21</option>
+            <option value="24" selected>24</option>
+          </select>
+        </div>
+        <input type="button" class="btn btn-dark btn-sm px-2 col-sm-2 col-3" id="mnemoClear" value="Clear All" />
+      </div>
+
+      <div class="form-floating mb-3 ">
+        <textarea class="form-control" id="mnemoTxt" style="height: 100px; font-size: 0.9rem"
+          placeholder="Enter your 12-24 words recovery phrase..."></textarea>
+        <label for="mnemoTxt" id="mnemoLbl">Enter BIP39 Mnemonic (12-24 words)...</label>
+        <div class="valid-feedback" id="mnemoValid"> Looks good! </div>
+        <div class="invalid-feedback" id="mnemoInvalid"> Invalid mnemonic </div>
+      </div>
+
+      <div class="input-group input-group-sm mb-3 ">
+        <span class="input-group-text col-md-3 col-sm-4 col-5">Passphrase</span>
+        <input type="password" id="mnemoPass" class="form-control" placeholder="(Optional, if set for mnemonic)">
+      </div>
+
+      <div class="input-group input-group-sm mb-3 ">
+        <label class="input-group-text col-md-3 col-sm-4 col-5" for="clients">Wallet Client</label>
+        <select class="form-select" id="clients">
+          <option value="atomic">atomic</option>
+          <option value="coinomi" selected>coinomi</option>
+          <option value="exodus">exodus</option>
+          <option value="ledger">ledger</option>
+          <option value="trust">trust</option>
+          <option value="custom">custom</option>
+          <option value="search">...search</option>
         </select>
       </div>
-      <input type="button" class="btn btn-dark btn-sm px-2 col-sm-2 col-3" id="mnemoClear" value="Clear All" />
-    </div>
 
-    <div class="form-floating mb-3 mnemo-tab">
-      <textarea class="form-control" id="mnemoTxt" style="height: 100px; font-size: 0.9rem"
-        placeholder="Enter your 12-24 words recovery phrase..."></textarea>
-      <label for="mnemoTxt" id="mnemoLbl">Enter BIP39 Mnemonic (12-24 words)...</label>
-      <div class="valid-feedback" id="mnemoValid"> Looks good! </div>
-      <div class="invalid-feedback" id="mnemoInvalid"> Invalid mnemonic </div>
-    </div>
+      <!-- ::DERIVATION SEARCH TOOL::  -->
+      <div class="" id="searchSection" style="display: none;">
+        <div class="row">
+          <small class="text-primary fst-italic">
+            Derivation Search: enter your current Algorand address below and the tool will try several method/path
+            combinations.
+          </small>
+        </div>
 
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <span class="input-group-text col-md-3 col-sm-4 col-5">Passphrase</span>
-      <input type="password" id="mnemoPass" class="form-control" placeholder="(Optional, if set for mnemonic)">
-    </div>
+        <div class="input-group input-group-sm mb-3">
+          <span class="input-group-text col-md-3 col-sm-4 col-5">Current Address</span>
+          <input type="text" id="searchAddress" class="form-control form-control-sm"
+            placeholder="Enter Algorand wallet address to search">
+          <div class="valid-feedback"> Looks good! </div>
+          <div class="invalid-feedback" id="searchInvalid"> Invalid input </div>
+          <div id="searchFeedback"></div>
+        </div>
 
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <label class="input-group-text col-md-3 col-sm-4 col-5" for="clients">Wallet Client</label>
-      <select class="form-select" id="clients">
-        <option value="atomic">atomic</option>
-        <option value="coinomi" selected>coinomi</option>
-        <option value="exodus">exodus</option>
-        <option value="ledger">ledger</option>
-        <option value="trust">trust</option>
-        <option value="custom">custom</option>
-        <option value="search">...search</option>
-      </select>
-    </div>
+        <div class="input-group input-group-sm mb-3">
+          <button class="btn btn-success btn-sm col-md-3 col-sm-4 col-6" id="searchBtn">
+            <span class="spinner-border spinner-border-sm" id="searchBtnSpinner" style="display: none;"></span>
+            Search
+          </button>
+          <input type="button" class="btn btn-danger btn-sm col-md-2 col-sm-3 col-4" id="searchKill" value="Cancel" />
+          <button class="btn btn-dark btn-sm col-sm-1 col-2" id="searchClear">
+            <i class="bi-x"></i>
+          </button>
+        </div>
 
-    <!-- ::DERIVATION SEARCH TOOL::  -->
-    <div class="mnemo-tab" id="searchSection" style="display: none;">
-      <div class="row">
-        <small class="text-primary fst-italic">
-          Derivation Search: enter your current Algorand address below and the tool will try several method/path
-          combinations.
-        </small>
       </div>
 
-      <div class="input-group input-group-sm mb-3">
-        <span class="input-group-text col-md-3 col-sm-4 col-5">Current Address</span>
-        <input type="text" id="searchAddress" class="form-control form-control-sm"
-          placeholder="Enter Algorand wallet address to search">
-        <div class="valid-feedback"> Looks good! </div>
-        <div class="invalid-feedback" id="searchInvalid"> Invalid input </div>
-        <div id="searchFeedback"></div>
+      <!-- ::DERIVATION METHOD::  -->
+      <div class="input-group input-group-sm mb-3 ">
+        <label class="input-group-text text-wrap col-md-3 col-sm-4 col-5" for="method">Derivation Method</label>
+        <select class="form-select" id="method" disabled>
+          <option value="1" selected>slip10-ed25519</option>
+          <option value="2">slip10-secp256k1</option>
+          <option value="3">kholaw-ed25519</option>
+          <option value="4">bip39-seed</option>
+        </select>
       </div>
 
-      <div class="input-group input-group-sm mb-3">
-        <input type="button" class="btn btn-success btn-sm col-md-3 col-sm-4 col-6" id="searchBtn" value="Search" />
-        <input type="button" class="btn btn-danger btn-sm col-md-2 col-sm-3 col-4" id="searchKill" value="Cancel" />
-        <button class="btn btn-dark btn-sm col-sm-1 col-2" id="searchClear">
-          <i class="bi-x"></i>
-        </button>
+      <!-- ::DERIVATION PATH::  -->
+      <div class="row ">
+        <label for="paths" class="form-label fw-bold col-form-label fw-bold">
+          Derivation Path
+          (<small><a href="https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki" target="_blank">BIP44
+              spec</a></small>)
+        </label>
       </div>
 
-    </div>
+      <div class="input-group input-group-sm mb-3 ">
+        <span class="input-group-text col-md-3 col-sm-4 col-5">Purpose</span>
+        <span class="input-group-text">m/</span>
+        <input type="number" class="form-control deriv-path" id='path1' min="0" value="44" title="purpose" disabled>
+        <span class="input-group-text">'/</span>
+      </div>
 
-    <!-- ::DERIVATION METHOD::  -->
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <label class="input-group-text text-wrap col-md-3 col-sm-4 col-5" for="method">Derivation Method</label>
-      <select class="form-select" id="method" disabled>
-        <option value="1" selected>slip10-ed25519</option>
-        <option value="2">slip10-secp256k1</option>
-        <option value="3">kholaw-ed25519</option>
-        <option value="4">bip39-seed</option>
-      </select>
-    </div>
+      <div class="input-group input-group-sm mb-3 ">
+        <span class="input-group-text col-md-3 col-sm-4 col-5">Coin type</span>
+        <input type="number" class="form-control deriv-path" id='path2' min="0" value="283" title="coin type" disabled>
+        <span class="input-group-text">'/</span>
+      </div>
 
-    <!-- ::DERIVATION PATH::  -->
-    <div class="row mnemo-tab">
-      <label for="paths" class="form-label fw-bold col-form-label fw-bold">
-        Derivation Path
-        (<small><a href="https://github.com/bitcoin/bips/blob/master/bip-0044.mediawiki" target="_blank">BIP44
-            spec</a></small>)
-      </label>
-    </div>
+      <div class="input-group input-group-sm mb-3 ">
+        <span class="input-group-text col-md-3 col-sm-4 col-5">Account</span>
+        <input type="number" class="form-control deriv-path" id='path3' min="0" value="0" title="account">
+        <span class="input-group-text">'/</span>
+      </div>
 
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <span class="input-group-text col-md-3 col-sm-4 col-5">Purpose</span>
-      <span class="input-group-text">m/</span>
-      <input type="number" class="form-control deriv-path" id='path1' min="0" value="44" title="purpose" disabled>
-      <span class="input-group-text">'/</span>
-    </div>
+      <div class="input-group input-group-sm mb-3 ">
+        <span class="input-group-text col-md-3 col-sm-4 col-5">Change</span>
+        <input type="number" class="form-control deriv-path" id='path4' min="0" value="0" title="change">
+        <span class="input-group-text">/</span>
+      </div>
 
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <span class="input-group-text col-md-3 col-sm-4 col-5">Coin type</span>
-      <input type="number" class="form-control deriv-path" id='path2' min="0" value="283" title="coin type" disabled>
-      <span class="input-group-text">'/</span>
-    </div>
+      <div class="input-group input-group-sm mb-3 ">
+        <span class="input-group-text col-md-3 col-sm-4 col-5">Address index</span>
+        <input type="number" class="form-control deriv-path" id='path5' min="0" value="0" title="address index">
+      </div>
 
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <span class="input-group-text col-md-3 col-sm-4 col-5">Account</span>
-      <input type="number" class="form-control deriv-path" id='path3' min="0" value="0" title="account">
-      <span class="input-group-text">'/</span>
-    </div>
-
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <span class="input-group-text col-md-3 col-sm-4 col-5">Change</span>
-      <input type="number" class="form-control deriv-path" id='path4' min="0" value="0" title="change">
-      <span class="input-group-text">/</span>
-    </div>
-
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <span class="input-group-text col-md-3 col-sm-4 col-5">Address index</span>
-      <input type="number" class="form-control deriv-path" id='path5' min="0" value="0" title="address index">
-    </div>
-
-    <!-- ::MAIN CONTROLS::  -->
-    <div class="input-group input-group-sm mb-3 mnemo-tab">
-      <input type="button" class="btn btn-success btn-sm   col-md-3 col-sm-4 col-6" id="startBtn" value="Start" />
-      <input type="button" class="btn btn-dark btn-sm px-2 col-md-2 col-sm-3 col-6" id="clearResultsBtn" value="Clear" />
+      <!-- ::MAIN CONTROLS::  -->
+      <div class="input-group input-group-sm mb-3 ">
+        <input type="button" class="btn btn-primary btn-sm   col-md-3 col-sm-4 col-6" id="startBtn" value="Start" />
+        <input type="button" class="btn btn-dark btn-sm px-2 col-md-2 col-sm-3 col-6" id="clearResultsBtn" value="Clear" />
+      </div>
     </div>
 
     <!-- ::FIND ME A COOL ADDRESS TAB::  -->

@@ -1,4 +1,45 @@
-const {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>public/js/main.js - Documentation</title>
+
+    <script src="scripts/prettify/prettify.js"></script>
+    <script src="scripts/prettify/lang-css.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+<body>
+
+<input type="checkbox" id="nav-trigger" class="nav-trigger" />
+<label for="nav-trigger" class="navicon-button x">
+  <div class="navicon"></div>
+</label>
+
+<label for="nav-trigger" class="overlay"></label>
+
+<nav>
+    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Events</li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:change">change</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:click">click</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:focus">focus</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:hashchange">hashchange</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:keyboard">keyboard</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:resize">resize</a></span></li><li class="nav-heading">Namespaces</li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="BipToAlgo.html">BipToAlgo</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#._NODE">_NODE</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoAddress">algoAddress</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoAddressFromMnemonic">algoAddressFromMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoKeyFromMnemonic">algoKeyFromMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoMnemonic">algoMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoSecret">algoSecret</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoWords">algoWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.bip39seed">bip39seed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.countAddressEnding">countAddressEnding</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.curveInfo">curveInfo</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveBip39Seed">deriveBip39Seed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveChild">deriveChild</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveChildKhoLaw">deriveChildKhoLaw</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveMnemonic">deriveMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveMnemonicTest">deriveMnemonicTest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.encodeXY">encodeXY</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.ent2bip39words">ent2bip39words</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.entCheckBits">entCheckBits</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.findBip39Word">findBip39Word</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.getPublicKey">getPublicKey</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.numsToWords">numsToWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.parseMnemonic">parseMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.prettifyWordsLTR">prettifyWordsLTR</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.prettifyWordsTTB">prettifyWordsTTB</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.randomAlgoAddress">randomAlgoAddress</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.randomWords">randomWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.rootKey">rootKey</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.testMnemonicWords">testMnemonicWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.tests">tests</a></span></li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="document.html">document</a></span></li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="mainjs.html">mainjs</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.changeMethod">changeMethod</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.changeWalletClient">changeWalletClient</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.checkBase32Input">checkBase32Input</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.checkMnemonic">checkMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.clear">clear</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.clearMnemonic">clearMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.clearStatus">clearStatus</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.createPdf">createPdf</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.derivationSearch">derivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.endDerivationSearch">endDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.findMyCoolAddress">findMyCoolAddress</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.generateMnemonic">generateMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.getParams">getParams</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.getPath">getPath</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.handleChangeWalletClient">handleChangeWalletClient</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.handleDerivationSearch">handleDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.handleMyCoolAddressLookup">handleMyCoolAddressLookup</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.killDerivationSearch">killDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.killMyCoolAddressLookup">killMyCoolAddressLookup</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.mnemonicFocusoutHangler">mnemonicFocusoutHangler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.mnemonicKeyboardEventHandler">mnemonicKeyboardEventHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.prettifyWords">prettifyWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printAddressQR">printAddressQR</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printPath">printPath</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printQR">printQR</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printWords">printWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.range">range</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.rePrintWords">rePrintWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.showAddressTab">showAddressTab</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.showInfoTab">showInfoTab</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.showMnemonicTab">showMnemonicTab</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.startDerivationSearch">startDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.startMnemonicDerivation">startMnemonicDerivation</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.startMyCoolAddressLookup">startMyCoolAddressLookup</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.tabSwitcher">tabSwitcher</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.updateStatus">updateStatus</a></span></li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="utils.html">utils</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="utils.html#.bytesToHex">bytesToHex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="utils.html#.hexToBytes">hexToBytes</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="utils.html#.reverseHex">reverseHex</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#_assert">_assert</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#b32hex">b32hex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bits2hex">bits2hex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bits2uintN">bits2uintN</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bytes2b11">bytes2b11</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#clients">clients</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#compose">compose</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#copyTargetValue">copyTargetValue</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#D">D</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#DefaultParams">DefaultParams</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#hex2b32">hex2b32</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#hex2bits">hex2bits</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#randomArray">randomArray</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#randomHex">randomHex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#range">range</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#splitter">splitter</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#uintN2bits">uintN2bits</a></span></li>
+</nav>
+
+<div id="main">
+    
+    <h1 class="page-title">public/js/main.js</h1>
+    
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>const {
   PDFDocument,
   StandardFonts,
   rgb
@@ -111,7 +152,7 @@ const vh = () => Math.max(document.documentElement.clientHeight || 0, window.inn
  * @returns {string} Abbreviated breakpoint (xs|sm|md|lg|xl|xxl)
  */
 const D = () => [...Object.entries(bk)].reverse().reduce((p, [k, v], i) => {
-  if (vw() >= v && p === "na") return k;
+  if (vw() >= v &amp;&amp; p === "na") return k;
   else return p
 }, "na")
 
@@ -198,7 +239,7 @@ function getPath() {
   ip = $('.deriv-path')
   ip.map(i => {
     path += '/' + (parseInt(ip[i].value) ? parseInt(ip[i].value) : 0)
-    if (i < 3) path += "'"
+    if (i &lt; 3) path += "'"
   })
   return path
 }
@@ -373,7 +414,7 @@ function printPath(path, disableIndex = -1) {
   ip.map(i => {
     if (path) ip[i].value = parseInt(path.split('/')[i + 1])
     else ip[i].value = ''
-    if (i < disableIndex) ip[i].disabled = true
+    if (i &lt; disableIndex) ip[i].disabled = true
     else ip[i].disabled = false
   })
 }
@@ -399,7 +440,7 @@ function changeWalletClient(client) {
   idx = clients.indexOf(client)
   if (idx === -1) throw new Error(`Client "${client}" not supported!`)
   $('#clients')[0].selectedIndex = idx
-  if (client != 'custom' && client != 'search') {
+  if (client != 'custom' &amp;&amp; client != 'search') {
     wallet = ambip39toalgo.wallets[client]
     $('#searchSection').hide()
     $('#method').prop('disabled', true)
@@ -485,8 +526,8 @@ function printWords(words) {
     pre.appendChild(span)
     div.appendChild(pre)
     cols[idx].appendChild(div)
-    if (s == 2 && i == 12) idx++
-    if (s == 5 && i % 5 == 4) idx++
+    if (s == 2 &amp;&amp; i == 12) idx++
+    if (s == 5 &amp;&amp; i % 5 == 4) idx++
   })
   cols.forEach(c => o.append(c))
 }
@@ -566,7 +607,7 @@ function findMyCoolAddress(prefix, alive, id, tick) {
       if (!alive) {
         clearInterval(id)
         tock = Date.now()
-        $('#lookupFeedback').html('<br>Address found in ' + (tock - tick) / 1000 + ' seconds')
+        $('#lookupFeedback').html('&lt;br>Address found in ' + (tock - tick) / 1000 + ' seconds')
         $('#lookupBtn').prop('disabled', false)
         $('#lookupBtnSpinner').hide()
         $('#algoKey').val(algo.key)
@@ -759,7 +800,7 @@ function mnemonicKeyboardEventHandler(e) {
   m = e.target.value.trim().toLowerCase().normalize('NFKD').split(' ')
   w = m.slice(-1)[0]
   // bw = undefined
-  if (e.type == 'keyup' && keyCode != 9) {
+  if (e.type == 'keyup' &amp;&amp; keyCode != 9) {
     bw = ambip39toalgo.findBip39Word(w)
     if (bw) {
       $('#mnemoLbl').html(bw)
@@ -805,7 +846,7 @@ function checkBase32Input(inputFieldId, invalidFeedbackId, maxLength, range = tr
   invalidFeedback = $(invalidFeedbackId)
   m = inputField.val().trim().toUpperCase().normalize('NFKD').split('')
   isValid = true
-  if (!range && m.length != maxLength) {
+  if (!range &amp;&amp; m.length != maxLength) {
     inputField.removeClass('is-valid')
     inputField.addClass('is-invalid')
     invalidFeedback.html('Invalid search: please input ' + maxLength + ' characters (A-Z and 2-7)')
@@ -819,7 +860,7 @@ function checkBase32Input(inputFieldId, invalidFeedbackId, maxLength, range = tr
     return -1
   }
   // Algorand addresses have length of 58 chars
-  if (maxLength == 58 && m.length == 58) {
+  if (maxLength == 58 &amp;&amp; m.length == 58) {
     b32endings = b32.split('').reduce((p, c, i) => {
       if (i % 4 == 0) p.push(c);
       return p
@@ -834,7 +875,7 @@ function checkBase32Input(inputFieldId, invalidFeedbackId, maxLength, range = tr
   }
 
   m.map((e, i, a) => {
-    isValid &= b32.search(e) >= 0
+    isValid &amp;= b32.search(e) >= 0
   })
 
   if (!isValid) {
@@ -1004,4 +1045,22 @@ $('#lookupWhat').on('keyup', function (e) {
   checkBase32Input('#lookupWhat', '#lookupInvalid', 6)
 })
 
-$('#btnPDF').on('click', () => createPdf())
+$('#btnPDF').on('click', () => createPdf())</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<br class="clear">
+
+<footer>
+    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.7</a> on Sun May 23 2021 23:42:21 GMT-0400 (Eastern Daylight Time) using the Minami theme.
+</footer>
+
+<script>prettyPrint();</script>
+<script src="scripts/linenumber.js"></script>
+</body>
+</html>

@@ -1,6 +1,13 @@
 const rand = require('random-number-csprng')
 
-// Convert a hex string to a byte array
+/** @namespace utils */
+
+/**
+ * Convert a hex string to a byte array
+ * @memberof utils
+ * @param {string} hex 
+ * @returns {number[]} bytes
+ */
 function hexToBytes(hex) {
     if(hex.substr(0,2)=='0x') hex = hex.substr(2)
     if(hex.length % 2 == 1) hex = '0'+ hex
@@ -8,9 +15,13 @@ function hexToBytes(hex) {
     bytes.push(parseInt(hex.substr(c, 2), 16));
     return bytes
 }
-var hexToUint8Array = hex => Uint8Array.from(hexToBytes(hex))
 
-// Convert a byte array to a hex string
+/**
+ * Convert a byte array to a hex string
+ * @memberof utils
+ * @param {number[]} bytes 
+ * @returns {string} hex
+ */
 function bytesToHex(bytes) {
     for (var hex = [], i = 0; i < bytes.length; i++) {
         hex.push((bytes[i] >>> 4).toString(16));
@@ -20,9 +31,8 @@ function bytesToHex(bytes) {
     if(hex.length % 2 == 1) hex = '0'+ hex
     return hex
 }
-var uint8ArrayToHex = bytes => bytesToHex(bytes)
 
-// unint <--> hex
+// unint <~> hex
 var uint8hex  = u => u.reduce((p,c)=>p+c.toString(16).padStart(2,'0'),'')
 var uint16hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(4,'0'),'')
 var uint32hex = u => u.reduce((p,c)=>p+c.toString(16).padStart(8,'0'),'')
@@ -38,9 +48,9 @@ function hex2uintN(n,hex){
     return uintN
 }
 
-// Convert a hex string to a byte array
 /**
  * Reverses hexadecimal string
+ * @memberof utils
  * @param {string} hex - Hexadecimal string
  * @returns {string} Reversed hexadecimal string
  */
@@ -54,7 +64,11 @@ function reverseHex(hex) {
     return reverse
 }
 
-// bits <--> hex
+/**
+ * Converts hex string to binary bits
+ * @param {string} hex 
+ * @returns {string} bits
+ */
 function hex2bits(hex) {
     if(hex.substr(0,2)=='0x') hex = hex.substr(2)
     if(hex.length % 2 == 1) hex = '0'+ hex
@@ -63,7 +77,11 @@ function hex2bits(hex) {
     }
     return bits.join('')
 }
-
+/**
+ * Converts binary bits to hex string
+ * @param {string} bits 
+ * @returns {string} hex
+ */
 function bits2hex(bits) {
     buf = ''
     hex = ''
@@ -77,10 +95,10 @@ function bits2hex(bits) {
 }
 
 /**
- * Converts a bit string to an array of N-bit unsigned integers
+ * Converts a bits string to an array of N-bit unsigned integers
  * @param   {number} n      Number of bits
  * @param   {string} bits   Bits string
- * @returns {int[]}         Array of unsigned integers
+ * @returns {number[]}   Array of N-bit unsigned integers
  */
 function bits2uintN(n,bits) {
     uintN = []
@@ -91,8 +109,19 @@ function bits2uintN(n,bits) {
     return uintN
 }
 
+/**
+ * Converts array of N-bit unsigned integers to bits string
+ * @param {number} n Number of bits per number
+ * @param {number[]} u Array of N-bit unsigned integers 
+ * @returns {string} bits
+ */
 var uintN2bits = (n,u) => u.reduce((p,c)=>p+c.toString(2).padStart(n,'0'),'')
 
+/**
+ * Encodes Hex into Base32
+ * @param {string} hex 
+ * @returns {string} Base32 encoded string
+ */
 function hex2b32(hex){
     iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
     bits = hex2bits(hex)
@@ -107,6 +136,11 @@ function hex2b32(hex){
     return b32.join('') + pad
 }
 
+/**
+ * Dencodes Base32 string
+ * @param {string} b32 Base32 encoded string
+ * @returns {string} Hex
+ */
 function b32hex(b32){
     iambase32 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
     b32 = b32.replace(/=/gi,'')
@@ -116,6 +150,11 @@ function b32hex(b32){
     return bits2hex(bits)
 }
 
+/**
+ * Converts array of bytes into array of 11-bit numbers
+ * @param {number[]} bytes Array of bytes
+ * @returns {number[]} Array of 11-bit numbers
+ */
 function bytes2b11(bytes){
     bits = ''
     b11 = []
@@ -128,8 +167,18 @@ function bytes2b11(bytes){
     return b11
 }
 
+/**
+ * Generates random bytes array in hexadecimal
+ * @param {number} size Number of bytes
+ * @returns {string} Hex
+ */
 var randomHex = size => randomArray(size).then(a => uint8hex(Uint8Array.from(a)))
 
+/**
+ * Generates random bytes array using a CSPRNG module
+ * @param {number} size Number of bytes
+ * @returns {Promise<number[]>} Array of bytes
+ */
 function randomArray(size){
     var a = []
     for (var i = 0; i < size; i++) {
@@ -138,13 +187,38 @@ function randomArray(size){
     return Promise.all(a)
 }
 
+/**
+ * Generates array with numbers from 0 [+ offset] to N [+ offset]
+ * @param {number} n     Size of array
+ * @param {number} [o=0] Offset
+ * @returns {Array} Array with N numbers
+ */
 const range = (n,o=0) => Array.from(new Uint8Array(n).map((e,i)=>i+o))
+
+/**
+ * Split string every N position
+ * @param {string} s String to split
+ * @param {number} n 
+ * @returns {}
+ */
 const splitter = (s,n) => Array.from(new Uint8Array(Math.ceil(s.length/n)).map( (e,i) => i*n ) ).map(i => s.substr(i,n))
+
+/**
+ * Chains functions together and passes return 
+ * value to the next function as an argument
+ * @param  {...any} fns List of functions
+ * @returns {any}
+ * @example
+ * f1 = x => x**2
+ * f2 = y => y-1
+ * c1 = z => compose(f1,f2)(z)
+ * c1(5) // returns 24
+ * c1(4) // returns 15
+ */
 const compose = (...fns) => arg => fns.reduce((composed, f) => f(composed), arg)
 
-
 module.exports = {
-    hexToBytes, hexToUint8Array, bytesToHex, uint8ArrayToHex,
+    hexToBytes, bytesToHex,
     uint8hex, uint16hex, uint32hex, uintN2hex,
     hex2uintN, reverseHex, hex2bits, bits2hex, 
     bits2uintN, uintN2bits, hex2b32, b32hex, 
