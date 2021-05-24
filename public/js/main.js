@@ -326,7 +326,7 @@ function clearStatus() {
 function generateMnemonic() {
   w = parseInt($('#mnemoRandSize option:selected').val())
   s = (w * 11 - (w * 11) % 32) / 8
-  ambip39toalgo.randomWords(s).then(random => {
+  bip39toalgo.randomWords(s).then(random => {
     $('#mnemoTxt').val(random)
     checkMnemonic()
   })
@@ -348,7 +348,7 @@ function clearMnemonic() {
  */
 function checkMnemonic() {
   sel = getParams()
-  parsedMnemonic = ambip39toalgo.parseMnemonic(sel.mnemonic)
+  parsedMnemonic = bip39toalgo.parseMnemonic(sel.mnemonic)
   if (!sel.mnemonic || sel.mnemonic == '') {
     $('#mnemoTxt').removeClass('is-valid')
     $('#mnemoTxt').removeClass('is-invalid')
@@ -400,7 +400,7 @@ function changeWalletClient(client) {
   if (idx === -1) throw new Error(`Client "${client}" not supported!`)
   $('#clients')[0].selectedIndex = idx
   if (client != 'custom' && client != 'search') {
-    wallet = ambip39toalgo.wallets[client]
+    wallet = bip39toalgo.wallets[client]
     $('#searchSection').hide()
     $('#method').prop('disabled', true)
     if (client == 'atomic') printPath(wallet.path, 999)
@@ -436,11 +436,11 @@ function handleChangeWalletClient(e) {
  */
 function startMnemonicDerivation() {
   sel = getParams()
-  parsedMnemonic = ambip39toalgo.parseMnemonic(sel.mnemonic)
+  parsedMnemonic = bip39toalgo.parseMnemonic(sel.mnemonic)
   if (parsedMnemonic.valid) {
     $('#mnemoTxt').removeClass('is-invalid')
     $('#mnemoTxt').addClass('is-valid')
-    ambip39toalgo.deriveMnemonic(sel.mnemonic, sel.method, sel.path, sel.passphrase)
+    bip39toalgo.deriveMnemonic(sel.mnemonic, sel.method, sel.path, sel.passphrase)
       .then(node => {
         // console.log(node)
         $('#bip39seed').val(node.bip39seed)
@@ -559,7 +559,7 @@ function copyTargetValue(e) {
  * @param {number} tick Initial timestampt
  */
 function findMyCoolAddress(prefix, alive, id, tick) {
-  ambip39toalgo.randomAlgoAddress()
+  bip39toalgo.randomAlgoAddress()
     .then(algo => {
       alive = !algo.address.startsWith(prefix.toUpperCase())
       if (algo) $('#algoAddress').val(algo.address)
@@ -570,7 +570,7 @@ function findMyCoolAddress(prefix, alive, id, tick) {
         $('#lookupBtn').prop('disabled', false)
         $('#lookupBtnSpinner').hide()
         $('#algoKey').val(algo.key)
-        ambip39toalgo.algoWords(algo.key).then(algo => {
+        bip39toalgo.algoWords(algo.key).then(algo => {
           printWords(algo.words)
           printQR(algo.words)
           S.algo = algo
@@ -637,7 +637,7 @@ function killMyCoolAddressLookup() {
 function derivationSearch(address, seed, field, id) {
   if (field.length == 0) {
     // done searching entire derivation method/path field
-    return ambip39toalgo.deriveBip39Seed(seed, 'bip39-seed', "m/0'/0'/0'/0/0")
+    return bip39toalgo.deriveBip39Seed(seed, 'bip39-seed', "m/0'/0'/0'/0/0")
       .then(node => {
         $('#bip39seed').val(node.bip39seed)
         $('#algoAddress').val('Not found')
@@ -658,7 +658,7 @@ function derivationSearch(address, seed, field, id) {
     if (mt[i].text == method) mt[i].selected = true
   })
 
-  return ambip39toalgo.deriveBip39Seed(seed, method, path)
+  return bip39toalgo.deriveBip39Seed(seed, method, path)
     .then(node => {
       $('#bip39seed').val(node.bip39seed)
       $('#algoAddress').val(node.algo.address)
@@ -685,7 +685,7 @@ function startDerivationSearch(address) {
   tick = Date.now()
   sel = getParams()
   updateStatus('Working...', Status.wip)
-  ambip39toalgo.bip39seed(sel.mnemonic, sel.passphrase, )
+  bip39toalgo.bip39seed(sel.mnemonic, sel.passphrase, )
     .then(seed => {
       methods = ['slip10-ed25519', 'slip10-secp256k1', 'kholaw-ed25519']
       paths = []
@@ -711,7 +711,7 @@ function handleDerivationSearch() {
   check = checkBase32Input('#searchAddress', '#searchInvalid', 58, false)
   if (check > 0) {
     sel = getParams()
-    parsedMnemonic = ambip39toalgo.parseMnemonic(sel.mnemonic)
+    parsedMnemonic = bip39toalgo.parseMnemonic(sel.mnemonic)
     if (parsedMnemonic.valid) {
       $('#searchBtn').prop('disabled', true)
       $('#searchBtnSpinner').show()
@@ -760,7 +760,7 @@ function mnemonicKeyboardEventHandler(e) {
   w = m.slice(-1)[0]
   // bw = undefined
   if (e.type == 'keyup' && keyCode != 9) {
-    bw = ambip39toalgo.findBip39Word(w)
+    bw = bip39toalgo.findBip39Word(w)
     if (bw) {
       $('#mnemoLbl').html(bw)
       $('#mnemoTxt').removeClass('is-invalid')
@@ -773,7 +773,7 @@ function mnemonicKeyboardEventHandler(e) {
   } else if (keyCode == 9) {
     e.preventDefault()
     w = m.slice(-1)[0]
-    bw = ambip39toalgo.findBip39Word(w)
+    bw = bip39toalgo.findBip39Word(w)
     if (bw) e.target.value = (m.slice(0, -1).join(' ') + ' ' + bw).trim()
   }
 }

@@ -1,8 +1,30 @@
 {
+  "name": "bip39toalgo",
+  "description": "Tool to convert BIP39 mnemonic to Algorand Secret",
+  "version": "1.0.0",
+  "author": {
+    "name": "Abraham Mera",
+    "email": "abraham@oortnet.com"
+  },
+  "license": "MIT",
+  "keywords": [
+    "bip39", "mnemonic", "algorand", "algo", "secret", "recovery", 
+    "ledger", "coinomi", "trust", "atomic", "exodus", "crypto", "wallet"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/abmera/bip39toalgo"
+  },
+  "homepage": "https://algorand.oortnet.com",
   "dependencies": {
     "bn.js": "^4.12.0",
     "crypto-js": "^4.0.0",
     "elliptic": "^6.5.4",
     "random-number-csprng": "^1.0.2"
+  },
+  "scripts": {
+    "test": "node ./src/test.js",
+    "example": "node ./src/example.js",
+    "start": "node ./src/bip39toalgo.js"
   }
 }

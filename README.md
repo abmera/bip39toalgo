@@ -7,6 +7,8 @@ While some advances have been made in terms of interoperability and recoverabili
 
 ## How to Use
 ### Web App
+---
+Go to the live webapp: <https://algorand.oortnet.com/>  
 To use the main functionality of this tool:
 
 1. Select the `Mnemonic Tool` tab
@@ -18,21 +20,30 @@ To use the main functionality of this tool:
 
 If your `Wallet Client` is not listed you could use the `Search` functionality which will try multiple derivation method/path combinations to find one that matches your `Current Address`, or play around with the `Custom` option.
 
-### Offline Usage
-1. Download this zip file: [Standalone Mnemonic Tool](ambip39toalgo.zip)
+#### Offline Usage
+1. Download this zip file: [Standalone Mnemonic Tool](bip39toalgo-webapp.zip)
 2. Disconnect from the Internet
 3. Unzip the file and open the `index.html` file
 
 ### Node app
+---
 1. Download and clone this repository
 2. Change directory to project folder
 3. Install dependencies with `npm install`
-4. Main app code is in `src/ambip39toalgo.js`
+4. Main app code is in `src/bip39toalgo.js`
+Read the source code documentation: <https://algorand.oortnet.com/docs/>
 
 #### Example
-Uncomment these lines in [`src/ambip39toalgo.js`](src/ambip39toalgo.js)
+Run this [example](src/example.js) with `node ./src/example.js`
 ```javascript
-deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
+const {
+    deriveMnemonic,
+    wallets,
+    prettifyWordsTTB
+} = require('./bip39toalgo')
+
+mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
+deriveMnemonic(mnemonic, wallets.ledger.method, wallets.ledger.path)
 .then(node => {
     console.log(node.algo.key)
     console.log(node.algo.address)
@@ -40,13 +51,13 @@ deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
     console.log(words)
 })
 // Returns:
-// 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
-// NMRBZNN2RXUNVLVVPVD53GJV6A2A55QWJXMD2KG42N7NQZB67WXYFGONVA
-//  1. sorry       6. laugh      11. setup      16. employ     21. favorite   
-//  2. aisle       7. tissue     12. kit        17. call       22. gaze       
-//  3. similar     8. upset      13. isolate    18. venture    23. maximum    
-//  4. royal       9. volcano    14. bonus      19. item       24. abandon    
-//  5. unveil     10. beach      15. poem       20. snack      25. leave 
+// 1075ab5e3fcedcb69eef77974b314cc0cbc163c01a0c354989dc70b8789a194f
+// NVGXFOROGBDBUW6CEQDX6V742PWFPLXUDKW6V7HOZHFD7GSQEB556GUZII
+//  1. pear        6. pumpkin    11. champion   16. army       21. vapor      
+//  2. punch       7. language   12. rose       17. chase      22. grief      
+//  3. quantum     8. jewel      13. logic      18. cement     23. juice      
+//  4. token       9. indicate   14. body       19. hour       24. able       
+//  5. ridge      10. share      15. stock      20. mandate    25. coast
 ```
 
 
@@ -57,13 +68,13 @@ deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
 `bip39-seed` does not derive the key, uses first 32 bytes of the BIP39 seed 
 
 ## Open Source
-This project is 100% open source, get the source code in the repository in [GitHub](https://github.com/)
+This project is 100% open source, get the source code in the repository in [GitHub](https://github.com/abmera/bip39toalgo)
 
 ## Buy Me a Coffee
 Coffee donations are welcome: `TIPKTP7LNT2SZ52445YP2YSZJQV53Z4FSJSIWLMKTSABZIVQ4L73U2QC3A`
 
 ## License
-Please refer to the software [license](LICENSE) for more details.
+Please refer to the software [license](https://github.com/abmera/bip39toalgo/blob/main/LICENSE) for more details.
 
 *The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.*
 

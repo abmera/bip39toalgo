@@ -1,45 +1,4 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>src/ambip39toalgo.js - Documentation</title>
-
-    <script src="scripts/prettify/prettify.js"></script>
-    <script src="scripts/prettify/lang-css.js"></script>
-    <!--[if lt IE 9]>
-      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
-    <![endif]-->
-    <link type="text/css" rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css">
-    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
-    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
-</head>
-<body>
-
-<input type="checkbox" id="nav-trigger" class="nav-trigger" />
-<label for="nav-trigger" class="navicon-button x">
-  <div class="navicon"></div>
-</label>
-
-<label for="nav-trigger" class="overlay"></label>
-
-<nav>
-    <li class="nav-link nav-home-link"><a href="index.html">Home</a></li><li class="nav-heading">Events</li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:change">change</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:click">click</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:focus">focus</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:hashchange">hashchange</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:keyboard">keyboard</a></span></li><li class="nav-heading"><span class="nav-item-type type-event">E</span><span class="nav-item-name"><a href="document.html#event:resize">resize</a></span></li><li class="nav-heading">Namespaces</li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="BipToAlgo.html">BipToAlgo</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#._NODE">_NODE</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoAddress">algoAddress</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoAddressFromMnemonic">algoAddressFromMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoKeyFromMnemonic">algoKeyFromMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoMnemonic">algoMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoSecret">algoSecret</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.algoWords">algoWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.bip39seed">bip39seed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.countAddressEnding">countAddressEnding</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.curveInfo">curveInfo</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveBip39Seed">deriveBip39Seed</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveChild">deriveChild</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveChildKhoLaw">deriveChildKhoLaw</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveMnemonic">deriveMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.deriveMnemonicTest">deriveMnemonicTest</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.encodeXY">encodeXY</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.ent2bip39words">ent2bip39words</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.entCheckBits">entCheckBits</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.findBip39Word">findBip39Word</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.getPublicKey">getPublicKey</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.numsToWords">numsToWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.parseMnemonic">parseMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.prettifyWordsLTR">prettifyWordsLTR</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.prettifyWordsTTB">prettifyWordsTTB</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.randomAlgoAddress">randomAlgoAddress</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.randomWords">randomWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.rootKey">rootKey</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.testMnemonicWords">testMnemonicWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="BipToAlgo.html#.tests">tests</a></span></li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="document.html">document</a></span></li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="mainjs.html">mainjs</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.changeMethod">changeMethod</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.changeWalletClient">changeWalletClient</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.checkBase32Input">checkBase32Input</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.checkMnemonic">checkMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.clear">clear</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.clearMnemonic">clearMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.clearStatus">clearStatus</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.createPdf">createPdf</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.derivationSearch">derivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.endDerivationSearch">endDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.findMyCoolAddress">findMyCoolAddress</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.generateMnemonic">generateMnemonic</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.getParams">getParams</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.getPath">getPath</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.handleChangeWalletClient">handleChangeWalletClient</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.handleDerivationSearch">handleDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.handleMyCoolAddressLookup">handleMyCoolAddressLookup</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.killDerivationSearch">killDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.killMyCoolAddressLookup">killMyCoolAddressLookup</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.mnemonicFocusoutHangler">mnemonicFocusoutHangler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.mnemonicKeyboardEventHandler">mnemonicKeyboardEventHandler</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.prettifyWords">prettifyWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printAddressQR">printAddressQR</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printPath">printPath</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printQR">printQR</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.printWords">printWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.range">range</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.rePrintWords">rePrintWords</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.showAddressTab">showAddressTab</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.showInfoTab">showInfoTab</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.showMnemonicTab">showMnemonicTab</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.startDerivationSearch">startDerivationSearch</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.startMnemonicDerivation">startMnemonicDerivation</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.startMyCoolAddressLookup">startMyCoolAddressLookup</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.tabSwitcher">tabSwitcher</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="mainjs.html#.updateStatus">updateStatus</a></span></li><li class="nav-heading"><span class="nav-item-type type-namespace">N</span><span class="nav-item-name"><a href="utils.html">utils</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="utils.html#.bytesToHex">bytesToHex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="utils.html#.hexToBytes">hexToBytes</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="utils.html#.reverseHex">reverseHex</a></span></li><li class="nav-heading"><a href="global.html">Globals</a></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#_assert">_assert</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#b32hex">b32hex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bits2hex">bits2hex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bits2uintN">bits2uintN</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#bytes2b11">bytes2b11</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#clients">clients</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#compose">compose</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#copyTargetValue">copyTargetValue</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#D">D</a></span></li><li class="nav-item"><span class="nav-item-type type-member">M</span><span class="nav-item-name"><a href="global.html#DefaultParams">DefaultParams</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#hex2b32">hex2b32</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#hex2bits">hex2bits</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#randomArray">randomArray</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#randomHex">randomHex</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#range">range</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#splitter">splitter</a></span></li><li class="nav-item"><span class="nav-item-type type-function">F</span><span class="nav-item-name"><a href="global.html#uintN2bits">uintN2bits</a></span></li>
-</nav>
-
-<div id="main">
-    
-    <h1 class="page-title">src/ambip39toalgo.js</h1>
-    
-
-    
-
-
-
-    
-    <section>
-        <article>
-            <pre class="prettyprint source linenums"><code>const bip39words = require('./bip39-en').words
+const bip39words = require('./bip39-en').words
 const utils = require('./utils')
 const hmacSHA512 = require('crypto-js/hmac-sha512')
 const hmacSHA256 = require('crypto-js/hmac-sha256')
@@ -60,9 +19,9 @@ const unhexilify = cp.enc.Hex.parse
 
 const _hmac512  = (message, secret) => hmacSHA512(message, secret)
 const _hmac256  = (message, secret) => hmacSHA256(message, secret)
-const _getBit   = (character, pattern) => (character &amp;  pattern) >>> 0
+const _getBit   = (character, pattern) => (character &  pattern) >>> 0
 const _setBit   = (character, pattern) => (character |  pattern) >>> 0
-const _clearBit = (character, pattern) => (character &amp; ~pattern) >>> 0
+const _clearBit = (character, pattern) => (character & ~pattern) >>> 0
 
 // In JS, to do bitwise operations with unsigned ints, follow these rules:
 // 1. Always end bitwise operations with >>> 0 so the result gets interpreted
@@ -72,7 +31,7 @@ const _clearBit = (character, pattern) => (character &amp; ~pattern) >>> 0
 // 3. Only if the last op is >>>, >>> 0 is not necessary.
 // Source: https://stackoverflow.com/questions/6798111/bitwise-operations-on-32-bit-unsigned-ints
 const _OR  = (x,y) => (x | y) >>> 0
-const _AND = (x,y) => (x &amp; y) >>> 0
+const _AND = (x,y) => (x & y) >>> 0
 const _XOR = (x,y) => (x ^ y) >>> 0
 
 // Source: https://en.wikipedia.org/wiki/ANSI_escape_code#Colors
@@ -88,11 +47,11 @@ const TRACE = (k,v, debug=_DBUG) => {
 const ENTER = (g   , debug=_DBUG) => { if(debug) console.group(YELLOW('ENTER ' + g)) }
 const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.log(YELLOW('LEAVE ' + g))} }
 
-/** @namespace BipToAlgo */
+/** @namespace bip39toalgo */
 
 /**
- * @typedef  {Object}   BipToAlgo.WordArray
- * @memberof BipToAlgo
+ * @typedef  {Object}   bip39toalgo.WordArray
+ * @memberof bip39toalgo
  * @property {number[]} words Bytes array as signed integers
  * @property {number}   sigBytes
  */
@@ -101,16 +60,16 @@ const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.lo
  * Stores order of elliptic curve and 
  * {@link https://github.com/satoshilabs/slips/blob/master/slip-0010.md|SLIP10}
  * modifier for master key generation.
- * @typedef  {Object} BipToAlgo.CurveParams
- * @memberof BipToAlgo
+ * @typedef  {Object} bip39toalgo.CurveParams
+ * @memberof bip39toalgo
  * @property {string} name      Name of elliptic curve
  * @property {string} modifier  Key to use in HMAC-SHA512 as per SLIP10
  * @property {BigInt} order     Order of the elliptic curve
  */
 
 /** 
- * @typedef  {Object}   BipToAlgo.AlgoData
- * @memberof BipToAlgo
+ * @typedef  {Object}   bip39toalgo.AlgoData
+ * @memberof bip39toalgo
  * @property {Object}   algo
  * @property {string}   algo.key        Algorand private key in hexadecimal
  * @property {address}  algo.address    Algorand public wallet address
@@ -121,53 +80,53 @@ const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.lo
  */
 
 /**
- * @typedef  {Object}              BipToAlgo.DerivationNode
- * @memberof BipToAlgo
- * @property {(string|BipToAlgo.WordArray)}  kL    Leftmost 32 bytes of private key
- * @property {(string|BipToAlgo.WordArray)}  kR    Rightmost 32 bytes of private Key
- * @property {(string|BipToAlgo.WordArray)=} A     32 bytes public key (y coordinatte only)
- * @property {(string|BipToAlgo.WordArray)=} c     32 bytes chain code
- * @property {(string|BipToAlgo.WordArray)=} P     32 bytes public key
- * @property {BipToAlgo.AlgoData=}           algo
+ * @typedef  {Object}              bip39toalgo.DerivationNode
+ * @memberof bip39toalgo
+ * @property {(string|bip39toalgo.WordArray)}  kL    Leftmost 32 bytes of private key
+ * @property {(string|bip39toalgo.WordArray)}  kR    Rightmost 32 bytes of private Key
+ * @property {(string|bip39toalgo.WordArray)=} A     32 bytes public key (y coordinatte only)
+ * @property {(string|bip39toalgo.WordArray)=} c     32 bytes chain code
+ * @property {(string|bip39toalgo.WordArray)=} P     32 bytes public key
+ * @property {bip39toalgo.AlgoData=}           algo
  */
 
 /**
  * Algorand secret mnemonic (25 BIP39 words)
- * @typedef {string[]} BipToAlgo.AlgoSecretWords
- * @memberof BipToAlgo
+ * @typedef {string[]} bip39toalgo.AlgoSecretWords
+ * @memberof bip39toalgo
  */
 
 /**
- * @typedef  {Object}           BipToAlgo.AlgoAddressData
- * @memberof BipToAlgo
+ * @typedef  {Object}           bip39toalgo.AlgoAddressData
+ * @memberof bip39toalgo
  * @property {string}           key
  * @property {string}           pub
  * @property {string}           address
  * @property {string=}          chk
- * @property {BipToAlgo.AlgoSecretWords=} words       Algorand secret words
+ * @property {bip39toalgo.AlgoSecretWords=} words       Algorand secret words
  */
 
  /**
- * @typedef  {Object}           BipToAlgo.AlgoMnemonicData
- * @memberof BipToAlgo
- * @property {BipToAlgo.AlgoSecretWords}  words       Algorand secret words  
+ * @typedef  {Object}           bip39toalgo.AlgoMnemonicData
+ * @memberof bip39toalgo
+ * @property {bip39toalgo.AlgoSecretWords}  words       Algorand secret words  
  * @property {string}           chk         Mnemonic checksum
  */
 
  /**
- * @typedef  {Object}           BipToAlgo.AlgoParsedMnemonicData
- * @memberof BipToAlgo
+ * @typedef  {Object}           bip39toalgo.AlgoParsedMnemonicData
+ * @memberof bip39toalgo
  * @property {string}           mnemonic    Parsed Algorand mnemonic
  * @property {string}           original    Original mnemonic normalized (NFKD)
- * @property {BipToAlgo.AlgoSecretWords}  words       Algorand secret words
+ * @property {bip39toalgo.AlgoSecretWords}  words       Algorand secret words
  * @property {string}           key         Private key in hexadecimal
  * @property {string}           checksum    Mnemonic checksum
  * @property {boolean}          valid       Mnemonic validity
  */
 
   /**
- * @typedef  {Object}    BipToAlgo.Bip39ParsedMnemonicData
- * @memberof BipToAlgo
+ * @typedef  {Object}    bip39toalgo.Bip39ParsedMnemonicData
+ * @memberof bip39toalgo
  * @property {string}    mnemonic    Parsed Algorand mnemonic
  * @property {string}    original    Original mnemonic normalized (NFKD)
  * @property {string[]}  words       Algorand secret words
@@ -176,14 +135,14 @@ const LEAVE = (g='', debug=_DBUG) => { if(debug) {console.groupEnd(); console.lo
  */
 
 /**
- * Returns {@link BipToAlgo.DerivationNode} from arguments
- * @memberof BipToAlgo
- * @param {(string|BipToAlgo.WordArray)} kL   Leftmost 32 bytes of private key
- * @param {(string|BipToAlgo.WordArray)} kR   Rightmost 32 bytes of private Key
- * @param {{A: (string|BipToAlgo.WordArray), 
- *  c: (string|BipToAlgo.WordArray), 
- *  p: (string|BipToAlgo.WordArray)}} args
- * @returns {BipToAlgo.DerivationNode} Derivation node
+ * Returns {@link bip39toalgo.DerivationNode} from arguments
+ * @memberof bip39toalgo
+ * @param {(string|bip39toalgo.WordArray)} kL   Leftmost 32 bytes of private key
+ * @param {(string|bip39toalgo.WordArray)} kR   Rightmost 32 bytes of private Key
+ * @param {{A: (string|bip39toalgo.WordArray), 
+ *  c: (string|bip39toalgo.WordArray), 
+ *  p: (string|bip39toalgo.WordArray)}} args
+ * @returns {bip39toalgo.DerivationNode} Derivation node
  */
 const _NODE = (kL,kR, ...args) => { 
     [ A, c, p ] = args
@@ -197,28 +156,28 @@ const _NODE = (kL,kR, ...args) => {
 function _assert(x, y, op='eq'){
     // console.log(x, op, y)
     exp = false
-    exp ^= op === 'eq' &amp; x === y
-    exp ^= op === 'gt' &amp; x >   y
-    exp ^= op === 'ge' &amp; x >=  y
-    exp ^= op === 'lt' &amp; x &lt;   y
-    exp ^= op === 'le' &amp; x &lt;=  y
+    exp ^= op === 'eq' & x === y
+    exp ^= op === 'gt' & x >   y
+    exp ^= op === 'ge' & x >=  y
+    exp ^= op === 'lt' & x <   y
+    exp ^= op === 'le' & x <=  y
     if(exp) return true
     else throw EvalError(RED(`\n${x}\nNOT ${op}\n${y}`))
 }
 /**
  * Convert integers to BIP39 words
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {number[]} nums 11-bit unsigned integers
  * @returns {string[]} List of BIP39 words
  */
 const numsToWords = nums => nums.reduce((p,c) => [...p, bip39words[c]],[])
 /**
  * Convert {@link https://github.com/bitcoin/bips/blob/master/bip-0039.mediawiki#from-mnemonic-to-seed|BIP39} mnemonic to seed
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} mnemonic    Mnemonic (12-24 words delimited by single space)
  * @param {string} passphrase  Passphrase as suffix for the salt
  * @param {string=} prefix     Modifier as prefix for the salt
- * @returns {BipToAlgo.WordArray} Seed
+ * @returns {bip39toalgo.WordArray} Seed
  */
 function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
     return new Promise(function(resolve,reject){
@@ -234,9 +193,9 @@ function bip39seed(mnemonic, passphrase='',prefix='mnemonic'){
 }
 /**
  * Get elliptic curve parameters
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} curveName Name of the elliptic curve
- * @returns {BipToAlgo.CurveParams} Curve parameters
+ * @returns {bip39toalgo.CurveParams} Curve parameters
  */
 function curveInfo(curveName){
     curves = {
@@ -262,11 +221,11 @@ function curveInfo(curveName){
  * Derive root key (master node) using SLIP10 specs or
  * implementing paper from D. Khovratovich and J. Law
  * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
- * @memberof BipToAlgo
- * @param {BipToAlgo.WordArray}   seed Entropy to derive root key
- * @param {BipToAlgo.CurveParams} curve Curve parameters
+ * @memberof bip39toalgo
+ * @param {bip39toalgo.WordArray}   seed Entropy to derive root key
+ * @param {bip39toalgo.CurveParams} curve Curve parameters
  * @param {string}      [method='slip10'] Derivation method (slip10|kholaw)
- * @returns {Promise&lt;BipToAlgo.DerivationNode>} Promise with derivation node
+ * @returns {Promise<bip39toalgo.DerivationNode>} Promise with derivation node
  */
 function rootKey(seed, curve, method='slip10'){
     return new Promise((res,error)=>{
@@ -279,7 +238,7 @@ function rootKey(seed, curve, method='slip10'){
                 kR = unhexilify(h.substr(64))
                 if(curve.name == 'ed25519') isAlive=false
                 a = BigInt('0x'+kL)
-                if(a&lt;curve.order &amp;&amp; a != 0) isAlive=false
+                if(a<curve.order && a != 0) isAlive=false
                 seed = unhexilify(h)
             TRACE('kL',kL.toString())
             TRACE('kR',kR.toString())
@@ -328,9 +287,9 @@ function rootKey(seed, curve, method='slip10'){
 }
 /**
  * Computes public key for given curve
- * @memberof BipToAlgo
- * @param {(string|BipToAlgo.WordArray)} key Private key
- * @param {BipToAlgo.CurveParams} curve Curve parameters
+ * @memberof bip39toalgo
+ * @param {(string|bip39toalgo.WordArray)} key Private key
+ * @param {bip39toalgo.CurveParams} curve Curve parameters
  * @returns {string} Public key in hexadecimal
  */
 function getPublicKey(key,curve){
@@ -343,7 +302,7 @@ function getPublicKey(key,curve){
         y    = pub.getY().toString('hex') // BN -> hex
         padx = x.padStart(64,'0')
         pady = y.padStart(64,'0')
-        if (BigInt('0x' + y) &amp; 1n) {
+        if (BigInt('0x' + y) & 1n) {
             k = '03' + padx
         } else{
             k = '02' + padx
@@ -353,12 +312,12 @@ function getPublicKey(key,curve){
 }
 /**
  * Derives child key from parent key data using SLIP10 specs
- * @memberof BipToAlgo
- * @param {(string|BipToAlgo.WordArray)} parentKey    Parent node private key
- * @param {BipToAlgo.WordArray} parentChaincode       Parent node chain code
+ * @memberof bip39toalgo
+ * @param {(string|bip39toalgo.WordArray)} parentKey    Parent node private key
+ * @param {bip39toalgo.WordArray} parentChaincode       Parent node chain code
  * @param {number} i                        Current path index
- * @param {BipToAlgo.CurveParams} curve               Curve params
- * @returns {Promise&lt;BipToAlgo.DerivationNode>}       Child node
+ * @param {bip39toalgo.CurveParams} curve               Curve params
+ * @returns {Promise<bip39toalgo.DerivationNode>}       Child node
  */
 function deriveChild(parentKey, parentChaincode, i, curve){
     return new Promise((res,error)=>{
@@ -379,7 +338,7 @@ function deriveChild(parentKey, parentChaincode, i, curve){
             a = BigInt('0x'+kL)
             key = (a + BigInt('0x' + parentKey)) % curve.order
 
-            if(a&lt;curve.order &amp;&amp;  key!= 0){
+            if(a<curve.order &&  key!= 0){
                 kL = unhexilify(key.toString(16).padStart(64,0))
                 break
             }
@@ -399,7 +358,7 @@ function deriveChild(parentKey, parentChaincode, i, curve){
 }
 /**
  * Encodes elliptic curve X-coordinate into Y-coordinate
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} x X-coordinate bytes in hexadecimal
  * @param {string} y Y-coordinate bytes in hexadecimal
  */
@@ -414,10 +373,10 @@ function encodeXY(x,y){
 /**
  * Derive child key by implementing paper from D. Khovratovich and J. Law
  * "BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace"
- * @memberof BipToAlgo
- * @param {BipToAlgo.DerivationNode} node         Parent node
+ * @memberof bip39toalgo
+ * @param {bip39toalgo.DerivationNode} node         Parent node
  * @param {number} i                    Current path index
- * @returns {Promise&lt;BipToAlgo.DerivationNode>}   Child node
+ * @returns {Promise<bip39toalgo.DerivationNode>}   Child node
  */
 function deriveChildKhoLaw(node, i){
     ENTER('DERIVE CHILD KHO-LAW')
@@ -437,7 +396,7 @@ function deriveChildKhoLaw(node, i){
         TRACE('i',i)
         TRACE('ib',ib)
 
-        if(i &lt; 2**31){
+        if(i < 2**31){
             // regular child
             Zi = '02' + AP + ib
             ci = '03' + AP + ib
@@ -504,10 +463,10 @@ function deriveChildKhoLaw(node, i){
 }
 
  /**
-  * Computes Algorand address and mnemonic from {@link BipToAlgo.DerivationNode}
-  * @memberof BipToAlgo
-  * @param {BipToAlgo.DerivationNode} node
-  * @returns {Promise&lt;BipToAlgo.DerivationNode>} Derivation node with Algorand's secret 
+  * Computes Algorand address and mnemonic from {@link bip39toalgo.DerivationNode}
+  * @memberof bip39toalgo
+  * @param {bip39toalgo.DerivationNode} node
+  * @returns {Promise<bip39toalgo.DerivationNode>} Derivation node with Algorand's secret 
   */
 function algoSecret(node){
     ENTER('ALGORAND SECRET')
@@ -530,9 +489,9 @@ function algoSecret(node){
 
 /**
  * Derives Algorand's public key from private key
- * @memberof BipToAlgo
- * @param {(string|BipToAlgo.WordArray)} key
- * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ * @memberof bip39toalgo
+ * @param {(string|bip39toalgo.WordArray)} key
+ * @returns {bip39toalgo.AlgoAddressData} Algorand's address data
  */
 function algoAddress(key){
     key = key.toString().padStart(64,'0')
@@ -543,9 +502,9 @@ function algoAddress(key){
 }
 /**
  * Translates Algorand private key to mnemonic words
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} key Private key in hexadecimal
- * @returns {BipToAlgo.AlgoMnemonicData} Algorand's mnemonic data
+ * @returns {bip39toalgo.AlgoMnemonicData} Algorand's mnemonic data
  */
 function algoMnemonic(key){
     nums = utils.bytes2b11(utils.hexToBytes(key))
@@ -558,16 +517,16 @@ function algoMnemonic(key){
 }
 /**
  * Generates random Algorand address
- * @memberof BipToAlgo
- * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ * @memberof bip39toalgo
+ * @returns {bip39toalgo.AlgoAddressData} Algorand's address data
  */
 const randomAlgoAddress = () => utils.randomHex(32).then(ent => algoAddress(ent))
 
 /**
  * Translates Algorand mnemonic to private key
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} mnemonic 
- * @returns {BipToAlgo.AlgoParsedMnemonicData} Algorand's parsed mnemonic data
+ * @returns {bip39toalgo.AlgoParsedMnemonicData} Algorand's parsed mnemonic data
  */
 function algoKeyFromMnemonic(mnemonic){
     mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
@@ -597,9 +556,9 @@ function algoKeyFromMnemonic(mnemonic){
 }
 /**
  * Derives Algorand public key and address
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} mnemonic Algorand mnemonic
- * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ * @returns {bip39toalgo.AlgoAddressData} Algorand's address data
  */
 function algoAddressFromMnemonic(mnemonic){
     var { key, words, valid } = algoKeyFromMnemonic(mnemonic)
@@ -609,7 +568,7 @@ function algoAddressFromMnemonic(mnemonic){
 }
 /**
  * Generates N random addresses and counts occurrences of last character
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {number} [n=1000] Number of addresses to generate
  * @returns {void} Nothing
  */
@@ -630,9 +589,9 @@ function countAddressEnding(n=1000){
 }
 /**
  * Computes Algorand address and mnemonic from private key
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} key Private key in hexadecimal
- * @returns {BipToAlgo.AlgoAddressData} Algorand's address data
+ * @returns {bip39toalgo.AlgoAddressData} Algorand's address data
  */
 function algoWords(key){
     return new Promise((res,error)=>{
@@ -644,11 +603,11 @@ function algoWords(key){
 }
 /**
  * Derives Algorand's secret from BIP39 seed and using given method and path
- * @memberof BipToAlgo
- * @param {BipToAlgo.WordArray}   seed    BIP39 seed bytes
+ * @memberof bip39toalgo
+ * @param {bip39toalgo.WordArray}   seed    BIP39 seed bytes
  * @param {string}      method  Derivation method
  * @param {string=}     path    Derivation path
- * @returns {Promise&lt;BipToAlgo.DerivationNode>} Derivation node with Algorand's secret
+ * @returns {Promise<bip39toalgo.DerivationNode>} Derivation node with Algorand's secret
  */
 function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
     TRACE('method',method)
@@ -679,7 +638,7 @@ function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
             return p.then(o=>{
                 idx = parseInt(c)
                 if (c.substr(-1) === "'") idx = _OR(idx, BIP32KEY_HARDEN)
-                if (curve.name === 'ed25519' &amp;&amp; method == 'slip10') idx = _OR(idx, BIP32KEY_HARDEN)
+                if (curve.name === 'ed25519' && method == 'slip10') idx = _OR(idx, BIP32KEY_HARDEN)
                 currPath = a.slice(0,i+1).join('/')
                 ENTER(currPath)
                 TRACE('parent key',o.kL.toString())
@@ -697,12 +656,12 @@ function deriveBip39Seed(seed, method, path="m/44'/283'/0'/0/0"){
 }
 /**
  * Derives Algorand's secret from BIP39 mnemonic and using given method and path
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param   {string}    mnemonic    BIP39 mnemonic
  * @param   {string}    method      Derivation method
  * @param   {string=}   path        Derivation path
  * @param   {string=}   passphrase  BIP39 mnemonic passphrase
- * @returns {Promise&lt;BipToAlgo.DerivationNode>} Derivation node with Algorand secret
+ * @returns {Promise<bip39toalgo.DerivationNode>} Derivation node with Algorand secret
  * @example
  * // Returns:
  * // 7b6ec191cb3b77f6593cefaddf0489af47bb65e0f4480391bcedd00caa822d11
@@ -726,8 +685,8 @@ function deriveMnemonic(mnemonic, method, path, passphrase=''){
 }
 /**
  * Formats list of 25 words in a 5x5 grid, indexed Left-to-Right
- * @memberof BipToAlgo
- * @param {BipToAlgo.AlgoSecretWords} words - Algorand secret words
+ * @memberof bip39toalgo
+ * @param {bip39toalgo.AlgoSecretWords} words - Algorand secret words
  * @returns {string} Formatted words list with line breaks
  */
 function prettifyWordsLTR(words){
@@ -745,8 +704,8 @@ function prettifyWordsLTR(words){
 }
 /**
  * Formats list of 25 words in a 5x5 grid, indexed Top-to-Bottom
- * @memberof BipToAlgo
- * @param {BipToAlgo.AlgoSecretWords} words - Algorand secret words
+ * @memberof bip39toalgo
+ * @param {bip39toalgo.AlgoSecretWords} words - Algorand secret words
  * @returns {string} Formatted words list with line breaks
  */
 function prettifyWordsTTB(words){
@@ -761,7 +720,7 @@ function prettifyWordsTTB(words){
 }
 /**
  * Computes BIP39 checksum bits for given entropy
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} ent Entropy bytes in hexadecimal
  * @param {number} cs  Checksum length in bits
  * @returns {string} Checksum bits
@@ -772,7 +731,7 @@ function entCheckBits(ent, cs){
 }
 /**
  * Translates entropy into BIP39 mnemonic words
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param   {string}   ent 
  * @returns {string[]} BI39 words list
  */
@@ -785,14 +744,14 @@ function ent2bip39words(ent){
 }
 /**
  * Generates random BIP39 words
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {number} size Entropy size in bytes (16|20|24|28|32)
  * @returns {string} Mnemonic words
  */
 const randomWords = size => utils.randomHex(size).then(r => ent2bip39words(r)).then(w => w.join(' '))
 /**
  * Find word in BIP39 wordlist
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} word BIP39 word to search
  * @returns {(string|undefined)} Found word
  */
@@ -802,9 +761,9 @@ function findBip39Word(word){
 }
 /**
  * Parses BIP39 mnemonic and verifies validity
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} mnemonic 
- * @returns {BipToAlgo.Bip39ParsedMnemonicData}
+ * @returns {bip39toalgo.Bip39ParsedMnemonicData}
  */
 function parseMnemonic(mnemonic){
     mnemonic = mnemonic.trim().toLowerCase().normalize('NFKD').split(' ')
@@ -827,7 +786,7 @@ function parseMnemonic(mnemonic){
 }
 /**
  * Generate dummy BIP39 mnemonic for testing
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {string} [word='all'] Dummy BIP39 word to repeat 
  * @param {number} [size=24]    Number of words (12|15|18|21|24)
  * @example
@@ -853,7 +812,7 @@ function testMnemonicWords(word='all',size=24){
 }
 /**
  * Derive mnemonic for given test vector
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @param {{ no: number, mnemonic: string, 
  *  method: string, path: string, key: string, 
  *  address: string }} testVector
@@ -878,7 +837,7 @@ function deriveMnemonicTest({ no, mnemonic, method, path, key, address }) {
 }
 /**
  * Run tests and log to console
- * @memberof BipToAlgo
+ * @memberof bip39toalgo
  * @returns {void} Nothing
  */
 function tests() {
@@ -969,7 +928,7 @@ const wallets = {
 //::EXAMPLE::
 //-------------------------------------------------------
 // mnemonic = 'all all all all all all all all all all all all all all all all all all all all all all all feel'
-// deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
+// deriveMnemonic(mnemonic, wallets.ledger.method, wallets.ledger.path)
 // .then(node => {
 //     console.log(node.algo.key)
 //     console.log(node.algo.address)
@@ -997,26 +956,9 @@ module.exports = {
     deriveMnemonic,
     findBip39Word,
     parseMnemonic,
+    prettifyWordsTTB,
     randomAlgoAddress,
     randomWords,
+    tests,
     wallets,
 }
-</code></pre>
-        </article>
-    </section>
-
-
-
-
-</div>
-
-<br class="clear">
-
-<footer>
-    Generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.6.7</a> on Sun May 23 2021 23:42:21 GMT-0400 (Eastern Daylight Time) using the Minami theme.
-</footer>
-
-<script>prettyPrint();</script>
-<script src="scripts/linenumber.js"></script>
-</body>
-</html>
