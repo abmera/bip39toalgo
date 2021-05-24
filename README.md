@@ -16,7 +16,7 @@ To use the main functionality of this tool:
 3. Choose your `Wallet Client` (currently known derivation paths for: Atomic, Coinomi, Exodus, Ledger and Trust)
 4. Press `Start`
 5. Confirm that the `Algorand Address` displayed matches your current address
-6. Write down your secret in a piece of paper and store it in a secure place. Do not take a screenshot! Take the necessary precautions to store your secret!
+6. Write down your secret in a piece of paper and store it in a secure place. **Do not take a screenshot! Take the necessary precautions to store your secret!**
 
 If your `Wallet Client` is not listed you could use the `Search` functionality which will try multiple derivation method/path combinations to find one that matches your `Current Address`, or play around with the `Custom` option.
 
@@ -31,6 +31,7 @@ If your `Wallet Client` is not listed you could use the `Search` functionality w
 2. Change directory to project folder
 3. Install dependencies with `npm install`
 4. Main app code is in `src/bip39toalgo.js`
+
 Read the source code documentation: <https://algorand.oortnet.com/docs/>
 
 #### Example
