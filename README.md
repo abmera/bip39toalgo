@@ -1,6 +1,7 @@
-# BIP39 to Algorand Mneminic
+# BIP39 Mnemonic to Algorand Secret
 ## Motivation
-As a paranoid long-term Algo holder with a Ledger wallet, this tool is the answer to the question: *What if my Ledger device malfunctions or I misplace it and don't have access to a new one?*
+As a paranoid long-term Algo holder with a Ledger wallet, this tool is the answer to the question: 
+> *What if my Ledger device malfunctions or I misplace it and don't have access to a new one?*
 
 While some advances have been made in terms of interoperability and recoverability across wallet clients (more details in [WalletsRecovery](https://walletsrecovery.org/)), there is still a considerable amount of inconsistencies. Thus, I couldn't just enter my Ledger recovery phrase (BIP39 mnemonic) in another multi-account wallet like Coinomi, Exodus or Trust. Also, I wanted to have the Algorand native 25-word recovery phrase in paper so that I could use in the official app to access my funds as a backup plan.
 
@@ -50,9 +51,9 @@ deriveMnemonic(mnemonic,"slip10-ed25519", "m/44'/283'/0'/0/0")
 
 
 ## Derivation Method
-`slip10-ed25519` uses [SLIP10](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) standard with elliptic curve ed25519
-`slip10-secp256k1` uses [SLIP10](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) standard with elliptic curve secp256k1
-`kholaw-ed25519` implements paper from D. Khovratovich and J. Law, " [BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace](https://ieeexplore.ieee.org/abstract/document/7966967)", 2017 IEEE European Symposium on Security and Privacy Workshops (EuroS&PW), 2017, pp. 27-31, doi: 10.1109/EuroSPW.2017.47.
+`slip10-ed25519` uses [SLIP10](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) standard with elliptic curve ed25519  
+`slip10-secp256k1` uses [SLIP10](https://github.com/satoshilabs/slips/blob/master/slip-0010.md) standard with elliptic curve secp256k1  
+`kholaw-ed25519` implements paper from D. Khovratovich and J. Law, " [BIP32-Ed25519: Hierarchical Deterministic Keys over a Non-linear Keyspace](https://ieeexplore.ieee.org/abstract/document/7966967)", 2017 IEEE European Symposium on Security and Privacy Workshops (EuroS&PW), 2017, pp. 27-31, doi: 10.1109/EuroSPW.2017.47.  
 `bip39-seed` does not derive the key, uses first 32 bytes of the BIP39 seed 
 
 ## Open Source
@@ -108,11 +109,11 @@ Algorand Secret: 	pear punch quantum token ridge pumpkin language jewel indicate
 ```
 
 ## Libraries
-[CryptoJS](https://github.com/brix/crypto-js)
-[download](http://danml.com/download.html)
-[Elliptic](https://github.com/indutny/elliptic)
-[jQuery](https://jquery.com/)
-[jQuery qrcode](https://www.jqueryscript.net/other/Canvas-Table-QR-Code-Generator.html)
-[PDF-LIB](https://pdf-lib.js.org/)
-[random-number-csprng](https://github.com/joepie91/node-random-number-csprng)
-[Twitter Bootstrap](https://getbootstrap.com/)
+[CryptoJS](https://github.com/brix/crypto-js)  
+[download](http://danml.com/download.html)  
+[Elliptic](https://github.com/indutny/elliptic)  
+[jQuery](https://jquery.com/)  
+[jQuery qrcode](https://www.jqueryscript.net/other/Canvas-Table-QR-Code-Generator.html)  
+[PDF-LIB](https://pdf-lib.js.org/)  
+[random-number-csprng](https://github.com/joepie91/node-random-number-csprng)  
+[Twitter Bootstrap](https://getbootstrap.com/)  
