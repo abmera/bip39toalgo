@@ -21,9 +21,9 @@ To use the main functionality of this tool:
 If your `Wallet Client` is not listed you could use the `Search` functionality which will try multiple derivation method/path combinations to find one that matches your `Current Address`, or play around with the `Custom` option.
 
 #### Offline Usage
-1. Download this zip file: [Standalone Mnemonic Tool](bip39toalgo-webapp.zip)
+1. Download the [Standalone Web App](https://github.com/abmera/bip39toalgo/blob/main/dist/bip39toalgo-webapp.zip)
 2. Disconnect from the Internet
-3. Unzip the file and open the `index.html` file
+3. Unzip the file and open the `bip39toalgo-webapp.html` file
 
 ### Node app
 ---
