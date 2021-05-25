@@ -8,8 +8,19 @@
   },
   "license": "MIT",
   "keywords": [
-    "bip39", "mnemonic", "algorand", "algo", "secret", "recovery", 
-    "ledger", "coinomi", "trust", "atomic", "exodus", "crypto", "wallet"
+    "bip39",
+    "mnemonic",
+    "algorand",
+    "algo",
+    "secret",
+    "recovery",
+    "ledger",
+    "coinomi",
+    "trust",
+    "atomic",
+    "exodus",
+    "crypto",
+    "wallet"
   ],
   "repository": {
     "type": "git",
@@ -26,5 +37,8 @@
     "test": "node ./src/test.js",
     "example": "node ./src/example.js",
     "start": "node ./src/bip39toalgo.js"
+  },
+  "devDependencies": {
+    "handlebars": "^4.7.7"
   }
 }
