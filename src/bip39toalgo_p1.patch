@@ -1,0 +1,37 @@
+--- bip39toalgo.js	2023-03-30 11:56:40.176731262 +0200
++++ bip39toalgo.js.new	2023-03-30 11:54:52.527456236 +0200
+@@ -9,6 +9,7 @@
+ const ecEd25519 = new EdDSA('ed25519');
+ const ecSECP256 = new EC('secp256k1');
+ const ecCurve25519 = new EC('ed25519');
++const {sha512_256} = require('js-sha512'); 
+ 
+ const BIP32KEY_HARDEN = 0x80000000
+ const ed25519_n = 2n**252n + 27742317777372353535851937790883648493n
+@@ -496,7 +497,7 @@
+ function algoAddress(key){
+     key = key.toString().padStart(64,'0')
+     pub = utils.bytesToHex(ecEd25519.keyFromSecret(key).getPublic())
+-    chk = hexilify(cp.SHA512t256(unhexilify(pub))).substr(0,64).substr(-8)
++    chk = (sha512_256(Buffer.from(pub, "hex"))).substr(-8)
+     address = utils.hex2b32(pub+chk).replace(/=/g,'')
+     return { key, pub, address, chk }
+ }
+@@ -509,7 +510,7 @@
+ function algoMnemonic(key){
+     nums = utils.bytes2b11(utils.hexToBytes(key))
+     words = numsToWords(nums)
+-    chk = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
++    chk = sha512_256(Buffer.from(key, 'hex')).substr(0,2*2)
+     chkN = utils.bytes2b11(utils.hexToBytes(chk))
+     chkW = numsToWords(chkN)[0]
+     words.push(chkW)
+@@ -541,7 +542,7 @@
+     bits = nums.slice(0,24).map((e,i) => e.toString(2).padStart(11,'0')).reverse().join('')
+     key = utils.reverseHex(utils.bits2hex(bits)).substr(0,64)
+     // compute the checksum to verify mnemonic:
+-    cs2 = cp.SHA512t256(unhexilify(key)).toString().substr(0,2*2)
++    cs2 = sha512_256(key).substr(0,2*2)
+     csN2 = utils.bytes2b11(utils.hexToBytes(cs2))[0]
+     isValid = csN1 === csN2
+     parsed = { 
