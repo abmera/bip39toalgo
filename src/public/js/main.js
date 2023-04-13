@@ -563,8 +563,8 @@ function findMyCoolAddress(prefix, alive, id, tick) {
   bip39toalgo.randomAlgoAddress()
     .then(algo => {
       alive = !algo.address.startsWith(prefix.toUpperCase())
-      if (algo) $('#algoAddress').val(algo.address)
       if (!alive) {
+        if (algo) $('#algoAddress').val(algo.address)
         clearInterval(id)
         tock = Date.now()
         $('#lookupFeedback').html('<br>Address found in ' + (tock - tick) / 1000 + ' seconds')
