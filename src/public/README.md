@@ -1,14 +1,23 @@
 # BIP39 Mnemonic to Algorand Secret
+
+Forked version. See README1.md for notices
+
+See the original version at <https://github.com/abmera/bip39toalgo>
+
 ## Motivation
 As a paranoid long-term Algo holder with a Ledger wallet, this tool is the answer to the question: 
 > *What if my Ledger device malfunctions or I misplace it and don't have access to a new one?*
 
-While some advances have been made in terms of interoperability and recoverability across wallet clients (more details in [WalletsRecovery](https://walletsrecovery.org/)), there is still a considerable amount of inconsistencies. Thus, I couldn't just enter my Ledger recovery phrase (BIP39 mnemonic) in another multi-account wallet like Coinomi, Exodus or Trust. Also, I wanted to have the Algorand native 25-word recovery phrase in paper so that I could use in the official app to access my funds as a backup plan.
+While some advances have been made in terms of interoperability and recoverability across wallet clients 
+(more details in [WalletsRecovery](https://walletsrecovery.org/)), there is still a considerable amount of 
+inconsistencies. Thus, I couldn't just enter my Ledger recovery phrase (BIP39 mnemonic) in another 
+multi-account wallet like Coinomi, Exodus or Trust. Also, I wanted to have the Algorand native 25-word 
+recovery phrase in paper so that I could use in the official app to access my funds as a backup plan.
 
 ## How to Use
 ### Web App
 ---
-Go to the live webapp: <https://algorand.oortnet.com/>  
+Go to the live webapp: <https://a-maugli.github.io/bip39toalgo/bip39toalgo-webapp.html>  
 To use the main functionality of this tool:
 
 1. Select the `Mnemonic Tool` tab
@@ -21,18 +30,18 @@ To use the main functionality of this tool:
 If your `Wallet Client` is not listed you could use the `Search` functionality which will try multiple derivation method/path combinations to find one that matches your `Current Address`, or play around with the `Custom` option.
 
 #### Offline Usage
-1. Download the [Standalone Web App](https://github.com/abmera/bip39toalgo/blob/main/dist/bip39toalgo-webapp.zip)
+1. Download the [Standalone Web App](https://a-maugli.github.io/bip39toalgo/bip39toalgo-webapp.zip)
 2. Disconnect from the Internet
 3. Unzip the file and open the `bip39toalgo-webapp.html` file
 
 ### Node app
 ---
-1. Download and clone this repository
-2. Change directory to project folder
+1. Download and clone this repository: `git clone https://github.com/a-maugli/bip39toalgo`
+2. Change directory to project folder `bip39toalgo`
 3. Install dependencies with `npm install`
 4. Main app code is in `src/bip39toalgo.js`
 
-Read the source code documentation: <https://algorand.oortnet.com/docs/>
+Read the source code documentation: <https://a-maugli.github.io/bip39toalgo/docs/>
 
 #### Example
 Run this [example](src/example.js) with `node ./src/example.js`
@@ -69,15 +78,22 @@ deriveMnemonic(mnemonic, wallets.ledger.method, wallets.ledger.path)
 `bip39-seed` does not derive the key, uses first 32 bytes of the BIP39 seed 
 
 ## Open Source
-This project is 100% open source, get the source code in the repository in [GitHub](https://github.com/abmera/bip39toalgo)
+This project is 100% open source, get the source code in the repository in [GitHub](https://github.com/a-maugli/bip39toalgo), forked from [GitHub/abmera](https://github.com/abmera/bip39toalgo)
+
+The fork wa necessary to reccreate the project from the source files. You are advised to to the same. See the README2.md file.
 
 ## Buy Me a Coffee
 Coffee donations are welcome: `TIPKTP7LNT2SZ52445YP2YSZJQV53Z4FSJSIWLMKTSABZIVQ4L73U2QC3A`
 
+This Algorand address is the address of original Author.
+
 ## License
 Please refer to the software [license](https://github.com/abmera/bip39toalgo/blob/main/LICENSE) for more details.
 
-*The software is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.*
+*The software is provided "as is", without warranty of any kind, express or implied, including but not limited 
+to the warranties of merchantability, fitness for a particular purpose and noninfringement. In no event shall 
+the authors or copyright holders be liable for any claim, damages or other liability, whether in an action of 
+contract, tort or otherwise, arising from, out of or in connection with the software or the use or other dealings in the software.*
 
 ## Test Vectors
 ### Atomic Wallet
